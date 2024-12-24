@@ -12,6 +12,8 @@ from transformers import RobertaModel, RobertaTokenizer
 import logging
 import transformers
 from torch import cuda
+# import tensorflow_ranking as tfr
+
 logging.basicConfig(level=logging.ERROR)
 
 # Setting up the device for GPU usage
@@ -98,32 +100,13 @@ training_loader = DataLoader(training_set, **train_params)
 testing_loader = DataLoader(testing_set, **test_params)
 
 
-# class RobertaClass(torch.nn.Module):
-#     def __init__(self):
-#         super(RobertaClass, self).__init__()
-#         self.l1 = RobertaModel.from_pretrained("roberta-base")
-#         self.pre_classifier = torch.nn.Linear(768, 768)     # 768 is the dimension of roberta-base
-#         self.dropout = torch.nn.Dropout(0.3)        # 0.3 is the dropout rate
-#         self.classifier = torch.nn.Linear(768, 4)     # 4 classes
-#
-#     def forward(self, input_ids, attention_mask, token_type_ids):
-#         output_1 = self.l1(input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)
-#         hidden_state = output_1[0]
-#         pooler = hidden_state[:, 0]
-#         pooler = self.pre_classifier(pooler)
-#         pooler = torch.nn.ReLU()(pooler)
-#         pooler = self.dropout(pooler)
-#         output = self.classifier(pooler)
-#         return output
-
-
 class RobertaClass(torch.nn.Module):
-    def __init__(self, num_classes):
+    def __init__(self):
         super(RobertaClass, self).__init__()
         self.l1 = RobertaModel.from_pretrained("roberta-base")
-        self.pre_classifier = torch.nn.Linear(768, 768)
-        self.dropout = torch.nn.Dropout(0.3)
-        self.classifier = torch.nn.Linear(768, num_classes - 1)  # num_classes - 1 thresholds
+        self.pre_classifier = torch.nn.Linear(768, 768)     # 768 is the dimension of roberta-base
+        self.dropout = torch.nn.Dropout(0.3)        # 0.3 is the dropout rate
+        self.classifier = torch.nn.Linear(768, 4)     # 4 classes
 
     def forward(self, input_ids, attention_mask, token_type_ids):
         output_1 = self.l1(input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)
@@ -135,32 +118,50 @@ class RobertaClass(torch.nn.Module):
         output = self.classifier(pooler)
         return output
 
+model = RobertaClass()
+model.to(device)
 
-# model = RobertaClass()
+# class RobertaClass(torch.nn.Module):
+#     def __init__(self, num_classes):
+#         super(RobertaClass, self).__init__()
+#         self.l1 = RobertaModel.from_pretrained("roberta-base")
+#         self.pre_classifier = torch.nn.Linear(768, 768)
+#         self.dropout = torch.nn.Dropout(0.3)
+#         self.classifier = torch.nn.Linear(768, num_classes - 1)  # num_classes - 1 thresholds
+#
+#     def forward(self, input_ids, attention_mask, token_type_ids):
+#         output_1 = self.l1(input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)
+#         hidden_state = output_1[0]
+#         pooler = hidden_state[:, 0]
+#         pooler = self.pre_classifier(pooler)
+#         pooler = torch.nn.ReLU()(pooler)
+#         pooler = self.dropout(pooler)
+#         output = self.classifier(pooler)
+#         return output
+
+# num_classes = 4  # Example with 5 classes
+# model = RobertaClass(num_classes=num_classes)
 # model.to(device)
 
-num_classes = 4  # Example with 5 classes
-model = RobertaClass(num_classes=num_classes)
-model.to(device)
+
 
 
 
 
 # Creating the loss function and optimizer, use Ordinal Cross Entropy Loss
 
-# class OrdinalCrossEntropyLoss(torch.nn.Module):
-#     def __init__(self):
-#         super().__init__()
-#         self.sigmoid = torch.nn.Sigmoid()
-#
-#     def forward(self, y_pred, y_true):
-#         y_true = y_true - 1  # Adjust for 1-based labels
-#         y_pred = self.sigmoid(y_pred)  # Convert logits to probabilities
-#         bins = torch.nn.functional.one_hot(y_true, num_classes=y_pred.shape[1])
-#         bins = torch.cumsum(bins, dim=1)
-#         loss = -torch.mean(bins * torch.log(y_pred + 1e-7) +
-#                            (1 - bins) * torch.log(1 - y_pred + 1e-7))
-#         return loss
+class OrdinalCrossEntropyLoss(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.sigmoid = torch.nn.Sigmoid()
+
+    def forward(self, y_pred, y_true):
+        y_pred = self.sigmoid(y_pred)  # Convert logits to probabilities
+        bins = torch.nn.functional.one_hot(y_true, num_classes=y_pred.shape[1])
+        bins = torch.cumsum(bins, dim=1)
+        loss = -torch.mean(bins * torch.log(y_pred + 1e-7) +
+                           (1 - bins) * torch.log(1 - y_pred + 1e-7))
+        return loss
 
 # class OrdinalCrossEntropyLoss(torch.nn.Module):
 #     def __init__(self):
@@ -247,38 +248,39 @@ model.to(device)
 #         # Return the mean loss
 #         return weighted_loss.mean()
 
-class SigmoidOrdinalRegressionLoss(torch.nn.Module):
-    def __init__(self):
-        super(SigmoidOrdinalRegressionLoss, self).__init__()
-
-    def forward(self, logits, targets):
-        """
-        Args:
-            logits: Tensor of shape [batch_size, num_classes - 1]
-            targets: Tensor of shape [batch_size] containing true class labels
-        Returns:
-            Loss value penalizing squared differences for ordinal regression.
-        """
-        # Apply sigmoid to logits to get cumulative probabilities
-        cum_probs = torch.sigmoid(logits)
-
-        # Convert targets into binary cumulative format
-        batch_size, num_classes_minus_1 = logits.shape
-        cumulative_labels = torch.zeros((batch_size, num_classes_minus_1), device=logits.device)
-        for i in range(num_classes_minus_1):
-            cumulative_labels[:, i] = (targets > i).float()
-
-        # Calculate Mean Squared Error (MSE) between cumulative probabilities and cumulative labels
-        mse_loss = torch.mean((cum_probs - cumulative_labels) ** 2)
-
-        return mse_loss
-
-loss_function = SigmoidOrdinalRegressionLoss()
-optimizer = torch.optim.Adam(params=model.parameters(), lr=LEARNING_RATE)
-
-# loss = tfr.keras.losses.OrdinalLoss(ordinal_size=2)
+# class SigmoidOrdinalRegressionLoss(torch.nn.Module):
+#     def __init__(self):
+#         super(SigmoidOrdinalRegressionLoss, self).__init__()
 #
-# loss_function = OrdinalRegressionLoss()
+#     def forward(self, logits, targets):
+#         """
+#         Args:
+#             logits: Tensor of shape [batch_size, num_classes - 1]
+#             targets: Tensor of shape [batch_size] containing true class labels
+#         Returns:
+#             Loss value penalizing squared differences for ordinal regression.
+#         """
+#         # Apply sigmoid to logits to get cumulative probabilities
+#         cum_probs = torch.sigmoid(logits)
+#
+#         # Convert targets into binary cumulative format
+#         batch_size, num_classes_minus_1 = logits.shape
+#         cumulative_labels = torch.zeros((batch_size, num_classes_minus_1), device=logits.device)
+#         for i in range(num_classes_minus_1):
+#             cumulative_labels[:, i] = (targets > i).float()
+#
+#         print(f"cum_probs: {cum_probs}")
+#         print(f"cumulative_labels: {cumulative_labels}")
+#         # Calculate Mean Squared Error (MSE) between cumulative probabilities and cumulative labels
+#         mse_loss = torch.mean((cum_probs - cumulative_labels) ** 2)
+#
+#         return mse_loss
+#
+# loss_function = SigmoidOrdinalRegressionLoss()
+# optimizer = torch.optim.Adam(params=model.parameters(), lr=LEARNING_RATE)
+
+
+# loss_function = tfr.keras.losses.OrdinalLoss(ordinal_size=2)
 # optimizer = torch.optim.Adam(params=model.parameters(), lr=LEARNING_RATE)
 
 def calcuate_accuracy(preds, targets):
