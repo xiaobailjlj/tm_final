@@ -1,0 +1,69 @@
+sentiment_analysis_using_roberta_log
+
+/opt/anaconda3/envs/tm_final/bin/python /Users/lujing/Desktop/cources/text_mining/final_ass/topic_biased_sentences_in_news/tm_final/sentiment_analysis_using_roberta.py 
+FULL Dataset: (1499, 2)
+TRAIN Dataset: (1199, 2)
+TEST Dataset: (300, 2)
+Some weights of RobertaModel were not initialized from the model checkpoint at roberta-base and are newly initialized: ['roberta.pooler.dense.bias', 'roberta.pooler.dense.weight']
+You should probably TRAIN this model on a down-stream task to be able to use it for predictions and inference.
+0it [00:00, ?it/s]Training Loss per 10 steps: 1.5606125593185425
+Training Accuracy per 10 steps: 50.0
+10it [03:07, 19.47s/it]Training Loss per 10 steps: 1.4923767393285579
+Training Accuracy per 10 steps: 53.40909090909091
+20it [06:03, 17.76s/it]Training Loss per 10 steps: 1.4116658312933785
+Training Accuracy per 10 steps: 56.54761904761905
+30it [08:55, 17.67s/it]Training Loss per 10 steps: 1.2976777745831398
+Training Accuracy per 10 steps: 59.67741935483871
+40it [11:58, 18.44s/it]Training Loss per 10 steps: 1.280972668310491
+Training Accuracy per 10 steps: 59.451219512195124
+50it [14:45, 17.19s/it]Training Loss per 10 steps: 1.2476391570240843
+Training Accuracy per 10 steps: 60.049019607843135
+60it [17:51, 18.49s/it]Training Loss per 10 steps: 1.2447844646016106
+Training Accuracy per 10 steps: 59.42622950819672
+70it [21:39, 24.47s/it]Training Loss per 10 steps: 1.223751126040875
+Training Accuracy per 10 steps: 60.563380281690144
+80it [24:47, 18.01s/it]Training Loss per 10 steps: 1.2013134455975192
+Training Accuracy per 10 steps: 61.574074074074076
+90it [27:43, 16.86s/it]Training Loss per 10 steps: 1.2084887368338448
+Training Accuracy per 10 steps: 60.57692307692308
+100it [30:39, 17.70s/it]Training Loss per 10 steps: 1.1891732510953847
+Training Accuracy per 10 steps: 61.26237623762376
+110it [33:31, 16.61s/it]Training Loss per 10 steps: 1.178259630460997
+Training Accuracy per 10 steps: 61.486486486486484
+120it [36:22, 17.22s/it]Training Loss per 10 steps: 1.1626112086713807
+Training Accuracy per 10 steps: 61.8801652892562
+130it [39:25, 18.23s/it]Training Loss per 10 steps: 1.1536039637245294
+Training Accuracy per 10 steps: 61.92748091603053
+140it [42:47, 19.97s/it]Training Loss per 10 steps: 1.1495423194364454
+Training Accuracy per 10 steps: 61.702127659574465
+150it [45:52, 18.35s/it]
+The Total Accuracy for Epoch 0: 61.63469557964971
+Training Loss Epoch: 1.1439555128415426
+Training Accuracy Epoch: 61.63469557964971
+
+
+
+1it [00:15, 15.71s/it]Validation Loss per 10 steps: 1.0647622346878052
+Validation Accuracy per 10 steps: 50.0
+11it [02:46, 13.83s/it]Validation Loss per 10 steps: 0.8661587265404788
+Validation Accuracy per 10 steps: 70.45454545454545
+21it [05:07, 15.49s/it]Validation Loss per 10 steps: 0.9462165534496307
+Validation Accuracy per 10 steps: 67.85714285714286
+31it [07:53, 15.90s/it]Validation Loss per 10 steps: 0.9471180371699794
+Validation Accuracy per 10 steps: 67.74193548387096
+41it [09:50, 10.96s/it]Validation Loss per 10 steps: 0.9517399123529109
+Validation Accuracy per 10 steps: 67.07317073170732
+51it [11:43, 12.02s/it]Validation Loss per 10 steps: 0.9634532162956163
+Validation Accuracy per 10 steps: 65.68627450980392
+61it [13:40, 12.06s/it]Validation Loss per 10 steps: 0.9818871768771625
+Validation Accuracy per 10 steps: 65.1639344262295
+71it [15:17, 10.00s/it]Validation Loss per 10 steps: 0.965353721883935
+Validation Accuracy per 10 steps: 65.84507042253522
+75it [15:57, 12.77s/it]
+Validation Loss Epoch: 0.961163424650828
+Validation Accuracy Epoch: 65.66666666666667
+Accuracy on test data = 65.67%
+All files saved
+This tutorial is completed
+
+Process finished with exit code 0
