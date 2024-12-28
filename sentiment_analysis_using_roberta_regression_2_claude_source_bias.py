@@ -1,3 +1,9 @@
+# use source_bias, there could be repeat sentences in training and evalution dataset, so the accuracy score is high
+# {'eval_loss': 0.008380803279578686, 'eval_mse': 0.008380803279578686, 'eval_mae': 0.06185008957982063, 'eval_r2': 0.8972118205534756, 'eval_regression_accuracy': 0.8276972624798712, 'eval_ordinal_accuracy': 0.7729468599033816, 'eval_runtime': 10.9807, 'eval_samples_per_second': 56.554, 'eval_steps_per_second': 3.552, 'epoch': 5.0}
+
+
+
+
 import pandas as pd
 from datasets import Dataset
 import torch
@@ -14,12 +20,6 @@ from sklearn.metrics import mean_squared_error
 from sklearn.metrics import r2_score
 # use preprocessed_dataset_source_bias.csv
 
-
-# all
-
-# NFL
-# {'eval_loss': 0.09633881598711014, 'eval_mse': 0.09633881598711014, 'eval_mae': 0.2546326518058777, 'eval_r2': 0.10343205128496469, 'eval_regression_accuracy': 0.3161290322580645, 'eval_ordinal_accuracy': 0.34838709677419355, 'eval_runtime': 2.7685, 'eval_samples_per_second': 55.987, 'eval_steps_per_second': 3.612, 'epoch': 5.0}
-# {'train_runtime': 251.1658, 'train_samples_per_second': 14.393, 'train_steps_per_second': 0.916, 'train_loss': 0.08496064725129501, 'epoch': 5.0}
 
 
 BASE_MODEL = "roberta-base"
@@ -80,7 +80,7 @@ def load_data():
 
 def preprocess_function(examples):
     # Ensure labels are properly scaled between 0 and 1
-    label = float(examples["bias_score"]) / 3.0  # This scales them to 0-1
+    label = float(examples["bias_score"]) / 4.0  # This scales them to 0-1
 
     result = tokenizer(
         examples["sentence_text"],
@@ -114,12 +114,12 @@ def compute_metrics_for_regression(eval_pred):
     r2 = r2_score(labels, logits)
 
     # Calculate accuracy with a tolerance
-    # Use 0.125 tolerance (slightly less than half the distance between classes)
-    tolerance = 0.125
+    # Use 0.1 tolerance (slightly less than half the distance between classes) 0-1, 5 classes
+    tolerance = 0.1
     accuracy = np.mean(np.abs(logits - labels) < tolerance)
 
-    pred_classes = np.round(logits * 3).clip(0, 3)
-    true_classes = np.round(labels * 3).clip(0, 3)
+    pred_classes = np.round(logits * 4).clip(0, 4)
+    true_classes = np.round(labels * 4).clip(0, 4)
     ordinal_accuracy = np.mean(pred_classes == true_classes)
 
     return {
@@ -194,7 +194,7 @@ if __name__ == '__main__':
 
     print("Evaluating on test set")
     trainer.eval_dataset = ds["test"]
-    trainer.evaluate()
+    print(trainer.evaluate())
 
 
 

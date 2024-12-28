@@ -1,3 +1,10 @@
+# use source_bias, there could be repeat sentences in training and evalution dataset, so the accuracy score is hige
+# {'eval_loss': 0.008380803279578686, 'eval_mse': 0.008380803279578686, 'eval_mae': 0.06185008957982063, 'eval_r2': 0.8972118205534756, 'eval_regression_accuracy': 0.8276972624798712, 'eval_ordinal_accuracy': 0.7729468599033816, 'eval_runtime': 10.9807, 'eval_samples_per_second': 56.554, 'eval_steps_per_second': 3.552, 'epoch': 5.0}
+
+# seperate the training and evaluation dataset, no overlap sentences
+# {'eval_loss': 0.15603163838386536, 'eval_mse': 0.15603163838386536, 'eval_mae': 0.30713289976119995, 'eval_r2': -0.11982654997555353, 'eval_regression_accuracy': 0.2721417069243156, 'eval_ordinal_accuracy': 0.3252818035426731, 'eval_runtime': 10.9602, 'eval_samples_per_second': 56.659, 'eval_steps_per_second': 3.558, 'epoch': 5.0}
+
+
 import pandas as pd
 from datasets import Dataset
 import torch
@@ -14,12 +21,6 @@ from sklearn.metrics import mean_squared_error
 from sklearn.metrics import r2_score
 # use preprocessed_dataset_source_bias.csv
 
-
-# all
-
-# NFL
-# {'eval_loss': 0.09633881598711014, 'eval_mse': 0.09633881598711014, 'eval_mae': 0.2546326518058777, 'eval_r2': 0.10343205128496469, 'eval_regression_accuracy': 0.3161290322580645, 'eval_ordinal_accuracy': 0.34838709677419355, 'eval_runtime': 2.7685, 'eval_samples_per_second': 55.987, 'eval_steps_per_second': 3.612, 'epoch': 5.0}
-# {'train_runtime': 251.1658, 'train_samples_per_second': 14.393, 'train_steps_per_second': 0.916, 'train_loss': 0.08496064725129501, 'epoch': 5.0}
 
 
 BASE_MODEL = "roberta-base"
@@ -52,19 +53,33 @@ model.to(device)
 
 def load_data():
     train = pd.read_csv('./news_bias_dataset/preprocessed_dataset_source_bias.csv', delimiter=',')
+    train = train.sort_values(by="id_sentence").reset_index(drop=True)
+    pd.set_option('display.max_rows', None)  # Display all rows
+    pd.set_option('display.max_columns', None)  # Display all columns
+    pd.set_option('display.expand_frame_repr', False)  # Prevent wrapping to the next line
+    print(train)
+
+
     print(train['bias_score'].unique())
     print(train.describe())
     new_df = train[['sentence_text', 'bias_score']]
-    train_size = 0.7
-    valid_size = 0.5
-    train_data = new_df.sample(frac=train_size, random_state=200)
-    train_data = train_data.reset_index(drop=True)
+    # train_size = 0.7
+    # valid_size = 0.5
+    # train_data = new_df.sample(frac=train_size, random_state=200)
+    # train_data = train_data.reset_index(drop=True)
+    #
+    # test_valid_data = new_df.drop(train_data.index).reset_index(drop=True)
+    # valid_data = test_valid_data.sample(frac=valid_size, random_state=200)
+    # valid_data = valid_data.reset_index(drop=True)
+    #
+    # test_data = test_valid_data.drop(valid_data.index).reset_index(drop=True)
 
-    test_valid_data = new_df.drop(train_data.index).reset_index(drop=True)
-    valid_data = test_valid_data.sample(frac=valid_size, random_state=200)
-    valid_data = valid_data.reset_index(drop=True)
+    train_size = int(0.7 * len(new_df))
+    valid_size = int(0.15 * len(new_df))
 
-    test_data = test_valid_data.drop(valid_data.index).reset_index(drop=True)
+    train_data = new_df.iloc[:train_size].reset_index(drop=True)
+    valid_data = new_df.iloc[train_size:train_size + valid_size].reset_index(drop=True)
+    test_data = new_df.iloc[train_size + valid_size:].reset_index(drop=True)
 
     print("FULL Dataset: {}".format(new_df.shape))
     print("TRAIN Dataset: {}".format(train_data.shape))
@@ -72,6 +87,7 @@ def load_data():
     print("VALID Dataset: {}".format(valid_data.shape))
 
     raw_train_ds = Dataset.from_pandas(train_data)
+    print(raw_train_ds)
     raw_valid_ds = Dataset.from_pandas(valid_data)
     raw_test_ds = Dataset.from_pandas(test_data)
 
@@ -80,7 +96,7 @@ def load_data():
 
 def preprocess_function(examples):
     # Ensure labels are properly scaled between 0 and 1
-    label = float(examples["bias_score"]) / 3.0  # This scales them to 0-1
+    label = float(examples["bias_score"]) / 4.0  # This scales them to 0-1
 
     result = tokenizer(
         examples["sentence_text"],
@@ -114,12 +130,12 @@ def compute_metrics_for_regression(eval_pred):
     r2 = r2_score(labels, logits)
 
     # Calculate accuracy with a tolerance
-    # Use 0.125 tolerance (slightly less than half the distance between classes)
-    tolerance = 0.125
+    # Use 0.1 tolerance (slightly less than half the distance between classes) 0-1, 5 classes
+    tolerance = 0.1
     accuracy = np.mean(np.abs(logits - labels) < tolerance)
 
-    pred_classes = np.round(logits * 3).clip(0, 3)
-    true_classes = np.round(labels * 3).clip(0, 3)
+    pred_classes = np.round(logits * 4).clip(0, 4)
+    true_classes = np.round(labels * 4).clip(0, 4)
     ordinal_accuracy = np.mean(pred_classes == true_classes)
 
     return {
@@ -194,7 +210,7 @@ if __name__ == '__main__':
 
     print("Evaluating on test set")
     trainer.eval_dataset = ds["test"]
-    trainer.evaluate()
+    print(trainer.evaluate())
 
 
 

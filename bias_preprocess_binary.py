@@ -22,6 +22,10 @@ for _, row in data.iterrows():
         # Append a new row if the sentence text is not null
         sentence_text = row[text_col]
         bias_score = row[id_sentence]
+        if bias_score != 1:
+            score = 1
+        else:  # bias_score == 1
+            score = 0
         if pd.notnull(sentence_text):
             cleaned_text = re.sub(r"^\[\d+\]:\s*", "", sentence_text)
             processed_rows.append({
@@ -30,14 +34,14 @@ for _, row in data.iterrows():
                 "article_bias": row["article_bias"],
                 "id_sentence": id_sentence,
                 "sentence_text": cleaned_text,
-                "bias_score": bias_score - 1  # Convert to 0-based index
+                "bias_score": score  # Convert to 0-1
             })
 
 # Convert the list of processed rows into a DataFrame
 processed_data = pd.DataFrame(processed_rows)
 
 # Save to CSV
-processed_data.to_csv("news_bias_dataset/preprocessed_dataset.csv", index=False)
+processed_data.to_csv("news_bias_dataset/preprocessed_dataset_binary.csv", index=False)
 
 
 print(processed_data.head())
