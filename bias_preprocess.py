@@ -13,6 +13,8 @@ text_columns = ["doctitle", "s0", "s1", "s2", "s3", "s4", "s5", "s6",
                 "s7", "s8", "s9", "s10", "s11", "s12", "s13", "s14",
                 "s15", "s16", "s17", "s18", "s19"]
 
+source_bias_dict = {"left": 2, "left-center": 1, "least": 0, "right-center": 1, "right": 2, "right-extream": 3}
+
 # Initialize a list to store the rows for the final DataFrame
 processed_rows = []
 
@@ -22,10 +24,12 @@ for _, row in data.iterrows():
         # Append a new row if the sentence text is not null
         sentence_text = row[text_col]
         bias_score = row[id_sentence]
+        source_bias = source_bias_dict[row["source_bias"]]
         if pd.notnull(sentence_text):
             cleaned_text = re.sub(r"^\[\d+\]:\s*", "", sentence_text)
             processed_rows.append({
                 "id_event": row["id_event"],
+                "source_bias": source_bias,
                 "id_article": row["id_article"],
                 "article_bias": row["article_bias"],
                 "id_sentence": id_sentence,
@@ -38,6 +42,5 @@ processed_data = pd.DataFrame(processed_rows)
 
 # Save to CSV
 processed_data.to_csv("news_bias_dataset/preprocessed_dataset.csv", index=False)
-
 
 print(processed_data.head())
