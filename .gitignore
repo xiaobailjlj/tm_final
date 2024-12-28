@@ -2,3 +2,4 @@ venv
 *.bin
 .idea
 .DS_Store
+models
