@@ -2,10 +2,13 @@
 
 
 import pandas as pd
+import transformers
 from datasets import Dataset
 import torch
 from datasets import Dataset
-from transformers import AutoTokenizer, AutoModelForSequenceClassification, DataCollatorWithPadding
+from torch import nn
+from transformers import AutoTokenizer, AutoModelForSequenceClassification, DataCollatorWithPadding, \
+    RobertaPreTrainedModel, RobertaModel
 from torch.utils.data import DataLoader
 import numpy as np
 from evaluate import load
@@ -23,11 +26,8 @@ BATCH_SIZE = 16
 EPOCHS = 5
 
 # 2 labels
-id2label = {k:k for k in range(5)}
-label2id = {k:k for k in range(5)}
-
-tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
-model = AutoModelForSequenceClassification.from_pretrained(BASE_MODEL, id2label=id2label, label2id=label2id)
+id2label = {k:k for k in range(4)}
+label2id = {k:k for k in range(4)}
 
 # tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
 # model = AutoModelForSequenceClassification.from_pretrained(
@@ -39,6 +39,86 @@ model = AutoModelForSequenceClassification.from_pretrained(BASE_MODEL, id2label=
 # # This allows the model to predict unbounded values
 # model.classifier.activation = None
 
+# 首先在模型中添加调试信息
+class RobertaForBiasClassification(RobertaPreTrainedModel):
+    def __init__(self, config):
+        super().__init__(config)
+        self.roberta = RobertaModel(config)
+
+        # 为article_bias和source_bias创建embedding层
+        self.article_bias_embeddings = nn.Embedding(4, 16)
+        self.source_bias_embeddings = nn.Embedding(4, 16)
+
+        # 合并所有特征的线性层
+        combined_dim = config.hidden_size + 16 + 16
+        self.classifier = nn.Sequential(
+            nn.Linear(combined_dim, 256),
+            nn.ReLU(),
+            nn.Dropout(0.1),
+            nn.Linear(256, config.num_labels)
+        )
+
+    def forward(self,
+                input_ids=None,
+                attention_mask=None,
+                article_bias=None,
+                source_bias=None,
+                labels=None):
+
+        # 添加输入验证
+        if article_bias is None or source_bias is None:
+            raise ValueError("article_bias and source_bias must be provided")
+
+        # 确保数据类型正确
+        article_bias = article_bias.to(torch.long)
+        source_bias = source_bias.to(torch.long)
+
+        # 确保值在有效范围内
+        if torch.max(article_bias) >= 4 or torch.min(article_bias) < 0:
+            raise ValueError(f"article_bias values must be between 0 and 3, got: {article_bias}")
+        if torch.max(source_bias) >= 4 or torch.min(source_bias) < 0:
+            raise ValueError(f"source_bias values must be between 0 and 3, got: {source_bias}")
+
+        # 获取RoBERTa的输出
+        outputs = self.roberta(
+            input_ids=input_ids,
+            attention_mask=attention_mask
+        )
+
+        sequence_output = outputs[0]
+        pooled_output = sequence_output[:, 0, :]
+
+        # 获取bias embeddings
+        article_bias_embed = self.article_bias_embeddings(article_bias)
+        source_bias_embed = self.source_bias_embeddings(source_bias)
+
+        # 连接所有特征
+        combined_features = torch.cat([
+            pooled_output,
+            article_bias_embed,
+            source_bias_embed
+        ], dim=1)
+
+        # 通过分类器
+        logits = self.classifier(combined_features)
+
+        loss = None
+        if labels is not None:
+            loss_fct = nn.CrossEntropyLoss()
+            loss = loss_fct(logits.view(-1, self.config.num_labels), labels.view(-1))
+
+        return transformers.modeling_outputs.SequenceClassifierOutput(
+            loss=loss,
+            logits=logits
+        )
+
+tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
+model = RobertaForBiasClassification.from_pretrained(
+    BASE_MODEL,
+    id2label=id2label,
+    label2id=label2id
+)
+
 
 
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
@@ -48,7 +128,7 @@ def load_data():
     train = pd.read_csv('./news_bias_dataset/preprocessed_dataset.csv', delimiter=',')
     print(train['bias_score'].unique())
     print(train.describe())
-    new_df = train[['sentence_text', 'bias_score']]
+    new_df = train[['source_bias', 'sentence_text', 'article_bias', 'bias_score']]
     train_size = 0.7
     valid_size = 0.5
     train_data = new_df.sample(frac=train_size, random_state=200)
@@ -74,8 +154,26 @@ def load_data():
 
 def preprocess_function(examples):
     label = examples["bias_score"]
-    results = tokenizer(examples["sentence_text"], truncation=True, padding="max_length", max_length=256)
+
+    # 确保article_bias和source_bias是整数
+    article_bias = int(examples["article_bias"])
+    source_bias = int(examples["source_bias"])
+
+    # 确保值在0-4范围内
+    article_bias = max(0, min(4, article_bias))
+    source_bias = max(0, min(4, source_bias))
+
+    results = tokenizer(
+        examples["sentence_text"],
+        truncation=True,
+        padding="max_length",
+        max_length=256
+    )
+
     results["label"] = label
+    results["article_bias"] = article_bias
+    results["source_bias"] = source_bias
+
     return results
 
 # def preprocess_function(examples):

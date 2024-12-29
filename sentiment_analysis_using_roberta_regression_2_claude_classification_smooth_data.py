@@ -48,7 +48,21 @@ def load_data():
     train = pd.read_csv('./news_bias_dataset/preprocessed_dataset.csv', delimiter=',')
     print(train['bias_score'].unique())
     print(train.describe())
-    new_df = train[['sentence_text', 'bias_score']]
+    # 提取需要的列
+    new_df = train[['id_event', 'id_article', 'id_sentence', 'sentence_text', 'bias_score']]
+
+    # 计算每组的平均 bias_score
+    group_avg = train.groupby(['id_event', 'id_article', 'id_sentence'])['bias_score'].transform('mean')
+
+    # 定义偏离阈值 (可以选择一个合适的值，比如标准差)
+    threshold = 1.0  # 自定义阈值，或使用 group_avg.std()
+
+    # 找到偏离太远的记录并替换为平均值
+    train['bias_score'] = train.apply(
+        lambda row: group_avg[row.name] if abs(row['bias_score'] - group_avg[row.name]) > threshold else row[
+            'bias_score'],
+        axis=1
+    )
     train_size = 0.7
     valid_size = 0.5
     train_data = new_df.sample(frac=train_size, random_state=200)
