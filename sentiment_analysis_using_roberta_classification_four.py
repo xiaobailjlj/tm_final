@@ -1,4 +1,5 @@
-# binary classification: neutral / bias
+# four classification
+# {'eval_loss': 1.1621623039245605, 'eval_accuracy': 0.46859903381642515, 'eval_runtime': 11.1691, 'eval_samples_per_second': 55.6, 'eval_steps_per_second': 3.492, 'epoch': 5.0}
 
 
 import pandas as pd
@@ -22,9 +23,9 @@ MAX_LENGTH = 256
 BATCH_SIZE = 16
 EPOCHS = 5
 
-# 2 labels
-id2label = {k:k for k in range(5)}
-label2id = {k:k for k in range(5)}
+# 4 labels, 0 1 2 3
+id2label = {k:k for k in range(4)}
+label2id = {k:k for k in range(4)}
 
 tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
 model = AutoModelForSequenceClassification.from_pretrained(BASE_MODEL, id2label=id2label, label2id=label2id)
@@ -41,7 +42,7 @@ model = AutoModelForSequenceClassification.from_pretrained(BASE_MODEL, id2label=
 
 
 
-device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+device = 'cpu'
 model.to(device)
 
 def load_data():
