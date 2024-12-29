@@ -1,6 +1,6 @@
 # binary classification: neutral / bias
 # for expert dataset BABE
-
+# {'eval_loss': 0.22323450446128845, 'eval_accuracy': 0.9386973180076629, 'eval_runtime': 13.9229, 'eval_samples_per_second': 56.238, 'eval_steps_per_second': 3.519, 'epoch': 5.0}
 
 import pandas as pd
 from datasets import Dataset
