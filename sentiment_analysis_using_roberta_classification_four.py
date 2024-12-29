@@ -1,5 +1,5 @@
-# binary classification: neutral / bias
-# for expert dataset BABE
+# four classification
+# {'eval_loss': 1.1621623039245605, 'eval_accuracy': 0.46859903381642515, 'eval_runtime': 11.1691, 'eval_samples_per_second': 55.6, 'eval_steps_per_second': 3.492, 'epoch': 5.0}
 
 
 import pandas as pd
@@ -23,9 +23,9 @@ MAX_LENGTH = 256
 BATCH_SIZE = 16
 EPOCHS = 5
 
-# 2 labels
-id2label = {k:k for k in range(5)}
-label2id = {k:k for k in range(5)}
+# 4 labels, 0 1 2 3
+id2label = {k:k for k in range(4)}
+label2id = {k:k for k in range(4)}
 
 tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
 model = AutoModelForSequenceClassification.from_pretrained(BASE_MODEL, id2label=id2label, label2id=label2id)
@@ -46,7 +46,7 @@ device = 'cpu'
 model.to(device)
 
 def load_data():
-    train = pd.read_csv('./news_bias_dataset/BABE/processed_labels.csv', delimiter=',')
+    train = pd.read_csv('./news_bias_dataset/preprocessed_dataset.csv', delimiter=',')
     print(train['bias_score'].unique())
     print(train.describe())
     new_df = train[['sentence_text', 'bias_score']]
@@ -198,6 +198,7 @@ if __name__ == '__main__':
     trainer.eval_dataset = ds["test"]
     print(trainer.evaluate())
 
+
     print("Evaluating on test set")
     # Perform evaluation
     predictions = trainer.predict(trainer.eval_dataset)
@@ -211,6 +212,4 @@ if __name__ == '__main__':
         print(f"Example {idx + 1}:")
         print(f"  True Label: {true}")
         print(f"  Predicted Label: {pred}")
-
-
 

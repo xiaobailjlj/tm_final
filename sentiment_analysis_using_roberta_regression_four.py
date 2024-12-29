@@ -1,4 +1,5 @@
-# binary classification: neutral / bias
+# four regression
+
 
 
 import pandas as pd
@@ -22,22 +23,22 @@ MAX_LENGTH = 256
 BATCH_SIZE = 16
 EPOCHS = 5
 
-# 2 labels
-id2label = {k:k for k in range(5)}
-label2id = {k:k for k in range(5)}
+# # 2 labels
+# id2label = {k:k for k in range(5)}
+# label2id = {k:k for k in range(5)}
+#
+# tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
+# model = AutoModelForSequenceClassification.from_pretrained(BASE_MODEL, id2label=id2label, label2id=label2id)
 
 tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
-model = AutoModelForSequenceClassification.from_pretrained(BASE_MODEL, id2label=id2label, label2id=label2id)
-
-# tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
-# model = AutoModelForSequenceClassification.from_pretrained(
-#     BASE_MODEL,
-#     num_labels=1,
-#     problem_type="regression"  # Explicitly set as regression
-# )
-# # Modify the model's final layer to remove sigmoid activation
-# # This allows the model to predict unbounded values
-# model.classifier.activation = None
+model = AutoModelForSequenceClassification.from_pretrained(
+    BASE_MODEL,
+    num_labels=1,
+    problem_type="regression"  # Explicitly set as regression
+)
+# Modify the model's final layer to remove sigmoid activation
+# This allows the model to predict unbounded values
+model.classifier.activation = None
 
 
 
@@ -75,7 +76,7 @@ def load_data():
 def preprocess_function(examples):
     label = examples["bias_score"]
     results = tokenizer(examples["sentence_text"], truncation=True, padding="max_length", max_length=256)
-    results["label"] = label
+    results["label"] = float(label)
     return results
 
 # def preprocess_function(examples):
@@ -114,12 +115,12 @@ def compute_metrics_for_regression(eval_pred):
     r2 = r2_score(labels, logits)
 
     # Calculate accuracy with a tolerance
-    # Use 0.125 tolerance (slightly less than half the distance between classes)
-    tolerance = 0.125
+    # Use 0.5 tolerance (slightly less than half the distance between classes)
+    tolerance = 0.5
     accuracy = np.mean(np.abs(logits - labels) < tolerance)
 
-    pred_classes = np.round(logits * 3).clip(0, 3)
-    true_classes = np.round(labels * 3).clip(0, 3)
+    pred_classes = np.round(logits).clip(0, 3)
+    true_classes = np.round(labels).clip(0, 3)
     ordinal_accuracy = np.mean(pred_classes == true_classes)
 
     return {
@@ -130,6 +131,13 @@ def compute_metrics_for_regression(eval_pred):
         "ordinal_accuracy": ordinal_accuracy
     }
 
+class RegressionTrainer(Trainer):
+    def compute_loss(self, model, inputs, return_outputs=False):
+        labels = inputs.pop("labels")
+        outputs = model(**inputs)
+        logits = outputs[0][:, 0]
+        loss = torch.nn.functional.mse_loss(logits, labels)
+        return (loss, outputs) if return_outputs else loss
 
 
 if __name__ == '__main__':
@@ -159,25 +167,17 @@ if __name__ == '__main__':
         num_train_epochs=EPOCHS,
         evaluation_strategy="epoch",
         save_strategy="epoch",
-        metric_for_best_model="accuracy",
+        metric_for_best_model="mse",
         load_best_model_at_end=True,
         weight_decay=0.01,
     )
 
-    # trainer = Trainer(
-    #     model=model,
-    #     args=training_args,
-    #     train_dataset=ds["train"],
-    #     eval_dataset=ds["valid"],
-    #     compute_metrics=compute_metrics
-    # )
-
-    trainer = Trainer(
+    trainer = RegressionTrainer(
         model=model,
         args=training_args,
         train_dataset=ds["train"],
         eval_dataset=ds["valid"],
-        compute_metrics=compute_metrics,
+        compute_metrics=compute_metrics_for_regression,
         tokenizer=tokenizer,  # Ensure the tokenizer is passed
         data_collator=DataCollatorWithPadding(tokenizer=tokenizer),  # Optional: Handle padding dynamically
     )
