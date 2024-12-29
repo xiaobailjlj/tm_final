@@ -1,5 +1,7 @@
 venv
 *.bin
+*.pt
+.idea\*
 .idea
 .DS_Store
 models
