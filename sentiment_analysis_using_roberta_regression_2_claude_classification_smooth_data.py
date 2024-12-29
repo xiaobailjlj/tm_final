@@ -1,6 +1,5 @@
 # binary classification: neutral / bias
-# for expert dataset BABE
-# {'eval_loss': 0.22323450446128845, 'eval_accuracy': 0.9386973180076629, 'eval_runtime': 13.9229, 'eval_samples_per_second': 56.238, 'eval_steps_per_second': 3.519, 'epoch': 5.0}
+
 
 import pandas as pd
 from datasets import Dataset
@@ -24,8 +23,8 @@ BATCH_SIZE = 16
 EPOCHS = 5
 
 # 2 labels
-id2label = {k:k for k in range(2)}
-label2id = {k:k for k in range(2)}
+id2label = {k:k for k in range(5)}
+label2id = {k:k for k in range(5)}
 
 tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
 model = AutoModelForSequenceClassification.from_pretrained(BASE_MODEL, id2label=id2label, label2id=label2id)
@@ -46,10 +45,24 @@ device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cp
 model.to(device)
 
 def load_data():
-    train = pd.read_csv('./news_bias_dataset/BABE/processed_labels.csv', delimiter=',')
+    train = pd.read_csv('./news_bias_dataset/preprocessed_dataset.csv', delimiter=',')
     print(train['bias_score'].unique())
     print(train.describe())
-    new_df = train[['sentence_text', 'bias_score']]
+    # 提取需要的列
+    new_df = train[['id_event', 'id_article', 'id_sentence', 'sentence_text', 'bias_score']]
+
+    # 计算每组的平均 bias_score
+    group_avg = train.groupby(['id_event', 'id_article', 'id_sentence'])['bias_score'].transform('mean')
+
+    # 定义偏离阈值 (可以选择一个合适的值，比如标准差)
+    threshold = 1.0  # 自定义阈值，或使用 group_avg.std()
+
+    # 找到偏离太远的记录并替换为平均值
+    train['bias_score'] = train.apply(
+        lambda row: group_avg[row.name] if abs(row['bias_score'] - group_avg[row.name]) > threshold else row[
+            'bias_score'],
+        axis=1
+    )
     train_size = 0.7
     valid_size = 0.5
     train_data = new_df.sample(frac=train_size, random_state=200)
@@ -198,6 +211,7 @@ if __name__ == '__main__':
     trainer.eval_dataset = ds["test"]
     print(trainer.evaluate())
 
+
     print("Evaluating on test set")
     # Perform evaluation
     predictions = trainer.predict(trainer.eval_dataset)
@@ -211,6 +225,4 @@ if __name__ == '__main__':
         print(f"Example {idx + 1}:")
         print(f"  True Label: {true}")
         print(f"  Predicted Label: {pred}")
-
-
 

@@ -31,7 +31,7 @@ for _, row in data.iterrows():
                 "id_event": row["id_event"],
                 "source_bias": source_bias,
                 "id_article": row["id_article"],
-                "article_bias": row["article_bias"],
+                "article_bias": row["article_bias"]-1,
                 "id_sentence": id_sentence,
                 "sentence_text": cleaned_text,
                 "bias_score": bias_score - 1  # Convert to 0-based index
