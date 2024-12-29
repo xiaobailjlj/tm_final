@@ -1,3 +1,6 @@
+# binary classification: neutral / bias
+
+
 import pandas as pd
 from datasets import Dataset
 import torch
@@ -12,15 +15,6 @@ from evaluate import load
 from sklearn.metrics import mean_absolute_error
 from sklearn.metrics import mean_squared_error
 from sklearn.metrics import r2_score
-# use preprocessed_dataset_source_bias.csv
-
-
-# all
-
-# NFL
-# {'eval_loss': 0.09633881598711014, 'eval_mse': 0.09633881598711014, 'eval_mae': 0.2546326518058777, 'eval_r2': 0.10343205128496469, 'eval_regression_accuracy': 0.3161290322580645, 'eval_ordinal_accuracy': 0.34838709677419355, 'eval_runtime': 2.7685, 'eval_samples_per_second': 55.987, 'eval_steps_per_second': 3.612, 'epoch': 5.0}
-# {'train_runtime': 251.1658, 'train_samples_per_second': 14.393, 'train_steps_per_second': 0.916, 'train_loss': 0.08496064725129501, 'epoch': 5.0}
-
 
 BASE_MODEL = "roberta-base"
 LEARNING_RATE = 2e-5
@@ -28,22 +22,22 @@ MAX_LENGTH = 256
 BATCH_SIZE = 16
 EPOCHS = 5
 
-# 5 labels
+# 2 labels
 id2label = {k:k for k in range(5)}
 label2id = {k:k for k in range(5)}
 
-# tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
-# model = AutoModelForSequenceClassification.from_pretrained(BASE_MODEL, id2label=id2label, label2id=label2id)
-
 tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
-model = AutoModelForSequenceClassification.from_pretrained(
-    BASE_MODEL,
-    num_labels=1,
-    problem_type="regression"  # Explicitly set as regression
-)
-# Modify the model's final layer to remove sigmoid activation
-# This allows the model to predict unbounded values
-model.classifier.activation = None
+model = AutoModelForSequenceClassification.from_pretrained(BASE_MODEL, id2label=id2label, label2id=label2id)
+
+# tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
+# model = AutoModelForSequenceClassification.from_pretrained(
+#     BASE_MODEL,
+#     num_labels=1,
+#     problem_type="regression"  # Explicitly set as regression
+# )
+# # Modify the model's final layer to remove sigmoid activation
+# # This allows the model to predict unbounded values
+# model.classifier.activation = None
 
 
 
@@ -51,7 +45,7 @@ device = 'cpu'
 model.to(device)
 
 def load_data():
-    train = pd.read_csv('./news_bias_dataset/preprocessed_dataset_source_bias.csv', delimiter=',')
+    train = pd.read_csv('./news_bias_dataset/preprocessed_dataset.csv', delimiter=',')
     print(train['bias_score'].unique())
     print(train.describe())
     new_df = train[['sentence_text', 'bias_score']]
@@ -79,17 +73,23 @@ def load_data():
 
 
 def preprocess_function(examples):
-    # Ensure labels are properly scaled between 0 and 1
-    label = float(examples["bias_score"]) / 3.0  # This scales them to 0-1
+    label = examples["bias_score"]
+    results = tokenizer(examples["sentence_text"], truncation=True, padding="max_length", max_length=256)
+    results["label"] = label
+    return results
 
-    result = tokenizer(
-        examples["sentence_text"],
-        truncation=True,
-        padding="max_length",
-        max_length=MAX_LENGTH
-    )
-    result["label"] = label
-    return result
+# def preprocess_function(examples):
+#     # Ensure labels are properly scaled between 0 and 1
+#     label = float(examples["bias_score"]) / 3.0  # This scales them to 0-1
+#
+#     result = tokenizer(
+#         examples["sentence_text"],
+#         truncation=True,
+#         padding="max_length",
+#         max_length=MAX_LENGTH
+#     )
+#     result["label"] = label
+#     return result
 
 
 def compute_metrics(eval_pred):
@@ -150,6 +150,7 @@ if __name__ == '__main__':
 
     metric = load("accuracy")
 
+
     training_args = TrainingArguments(
         output_dir="./models/roberta-fine-tuned-regression",
         learning_rate=LEARNING_RATE,
@@ -158,8 +159,7 @@ if __name__ == '__main__':
         num_train_epochs=EPOCHS,
         evaluation_strategy="epoch",
         save_strategy="epoch",
-        metric_for_best_model="mse",  # Changed to MSE since this is regression
-        greater_is_better=False,  # Lower MSE is better
+        metric_for_best_model="accuracy",
         load_best_model_at_end=True,
         weight_decay=0.01,
     )
@@ -177,15 +177,16 @@ if __name__ == '__main__':
         args=training_args,
         train_dataset=ds["train"],
         eval_dataset=ds["valid"],
-        compute_metrics=compute_metrics_for_regression,
+        compute_metrics=compute_metrics,
         tokenizer=tokenizer,  # Ensure the tokenizer is passed
         data_collator=DataCollatorWithPadding(tokenizer=tokenizer),  # Optional: Handle padding dynamically
     )
 
+
     print("Training model")
     trainer.train()
 
-    output_model_file = './models/sentiment_analysis_using_roberta_regression.bin'
+    output_model_file = './models/sentiment_analysis_using_roberta_classification.bin'
     output_vocab_file = './models/'
 
     model_to_save = model
@@ -194,7 +195,20 @@ if __name__ == '__main__':
 
     print("Evaluating on test set")
     trainer.eval_dataset = ds["test"]
-    trainer.evaluate()
+    print(trainer.evaluate())
 
 
+    print("Evaluating on test set")
+    # Perform evaluation
+    predictions = trainer.predict(trainer.eval_dataset)
+
+    # Extract true labels and predicted labels
+    true_labels = predictions.label_ids  # Ground truth labels
+    predicted_labels = predictions.predictions.argmax(axis=1)  # Predicted labels (for classification tasks)
+
+    # Print the results
+    for idx, (true, pred) in enumerate(zip(true_labels, predicted_labels)):
+        print(f"Example {idx + 1}:")
+        print(f"  True Label: {true}")
+        print(f"  Predicted Label: {pred}")
 
