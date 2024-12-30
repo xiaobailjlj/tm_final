@@ -49,8 +49,17 @@ def load_data():
     train_raw_dataset = pd.read_csv('./news_bias_dataset/preprocessed_dataset.csv', delimiter=',')
     print(train_raw_dataset['bias_score'].unique())
     print(train_raw_dataset.describe())
-    new_df = train_raw_dataset[['sentence_text', 'bias_score']]
+    new_df = train_raw_dataset[['id_event', 'id_article', 'id_sentence', 'sentence_text', 'bias_score']]
 
+    group_avg = train_raw_dataset.groupby(['id_event', 'id_article', 'id_sentence'])['bias_score'].transform('mean')
+
+    threshold = 1.0
+
+    train_raw_dataset['bias_score'] = train_raw_dataset.apply(
+        lambda row: group_avg[row.name] if abs(row['bias_score'] - group_avg[row.name]) > threshold else row[
+            'bias_score'],
+        axis=1
+    )
     train_size = 0.7
     valid_size = 0.5
     train_data = new_df.sample(frac=train_size, random_state=200)

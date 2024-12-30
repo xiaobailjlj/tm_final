@@ -3,10 +3,13 @@
 
 
 import pandas as pd
+import transformers
 from datasets import Dataset
 import torch
 from datasets import Dataset
-from transformers import AutoTokenizer, AutoModelForSequenceClassification, DataCollatorWithPadding
+from torch import nn
+from transformers import AutoTokenizer, AutoModelForSequenceClassification, DataCollatorWithPadding, RobertaModel, \
+    RobertaPreTrainedModel
 from torch.utils.data import DataLoader
 import numpy as np
 from evaluate import load
@@ -30,8 +33,71 @@ EPOCHS = 5
 # tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
 # model = AutoModelForSequenceClassification.from_pretrained(BASE_MODEL, id2label=id2label, label2id=label2id)
 
+class RobertaCombined(RobertaPreTrainedModel):
+    def __init__(self, config):
+        super().__init__(config)
+        self.roberta = RobertaModel(config)
+
+        self.article_bias_embeddings = nn.Embedding(4, 16)
+        self.source_bias_embeddings = nn.Embedding(4, 16)
+
+        combined_dim = config.hidden_size + 16 + 16
+        self.classifier = nn.Sequential(
+            nn.Linear(combined_dim, 256),
+            nn.ReLU(),
+            nn.Dropout(0.1),
+            nn.Linear(256, config.num_labels)
+        )
+
+    def forward(self,
+                input_ids=None,
+                attention_mask=None,
+                article_bias=None,
+                source_bias=None,
+                labels=None):
+
+        if article_bias is None or source_bias is None:
+            raise ValueError("article_bias and source_bias must be provided")
+
+        article_bias = article_bias.to(torch.long)
+        source_bias = source_bias.to(torch.long)
+
+        if torch.max(article_bias) >= 4 or torch.min(article_bias) < 0:
+            raise ValueError(f"article_bias values must be between 0 and 3, got: {article_bias}")
+        if torch.max(source_bias) >= 4 or torch.min(source_bias) < 0:
+            raise ValueError(f"source_bias values must be between 0 and 3, got: {source_bias}")
+
+        outputs = self.roberta(
+            input_ids=input_ids,
+            attention_mask=attention_mask
+        )
+
+        sequence_output = outputs[0]
+        pooled_output = sequence_output[:, 0, :]
+
+        article_bias_embed = self.article_bias_embeddings(article_bias)
+        source_bias_embed = self.source_bias_embeddings(source_bias)
+
+        combined_features = torch.cat([
+            pooled_output,
+            article_bias_embed,
+            source_bias_embed
+        ], dim=1)
+
+        logits = self.classifier(combined_features)
+
+        loss = None
+        if labels is not None:
+            loss_fct = nn.CrossEntropyLoss()
+            loss = loss_fct(logits.view(-1, self.config.num_labels), labels.view(-1))
+
+        return transformers.modeling_outputs.SequenceClassifierOutput(
+            loss=loss,
+            logits=logits
+        )
+
 tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
-model = AutoModelForSequenceClassification.from_pretrained(
+model = RobertaCombined.from_pretrained(
     BASE_MODEL,
     num_labels=1,
     problem_type="regression"  # Explicitly set as regression
@@ -49,7 +115,7 @@ def load_data():
     train_raw_dataset = pd.read_csv('./news_bias_dataset/preprocessed_dataset.csv', delimiter=',')
     print(train_raw_dataset['bias_score'].unique())
     print(train_raw_dataset.describe())
-    new_df = train_raw_dataset[['sentence_text', 'bias_score']]
+    new_df = train_raw_dataset[['source_bias', 'sentence_text', 'article_bias', 'bias_score']]
 
     train_size = 0.7
     valid_size = 0.5
@@ -76,8 +142,19 @@ def load_data():
 
 def preprocess_function(examples):
     label = examples["bias_score"]
+
+    article_bias = int(examples["article_bias"])
+    source_bias = int(examples["source_bias"])
+
+    article_bias = max(0, min(4, article_bias))
+    source_bias = max(0, min(4, source_bias))
+
     results = tokenizer(examples["sentence_text"], truncation=True, padding="max_length", max_length=256)
-    results["label"] = float(label)
+
+    results["label"] = label
+    results["article_bias"] = article_bias
+    results["source_bias"] = source_bias
+
     return results
 
 # def preprocess_function(examples):
@@ -134,7 +211,7 @@ def compute_metrics_for_regression(eval_pred):
 
 class RegressionTrainer(Trainer):
     def compute_loss(self, model, inputs, return_outputs=False):
-        labels = inputs.pop("labels")
+        labels = inputs.pop("labels").float()  # Convert labels to float
         outputs = model(**inputs)
         logits = outputs[0][:, 0]
         loss = torch.nn.functional.mse_loss(logits, labels)
