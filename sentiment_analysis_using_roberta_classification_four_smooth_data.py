@@ -1,4 +1,5 @@
-# binary classification: neutral / bias
+# four classification
+# {'eval_loss': 1.1621623039245605, 'eval_accuracy': 0.46859903381642515, 'eval_runtime': 11.1691, 'eval_samples_per_second': 55.6, 'eval_steps_per_second': 3.492, 'epoch': 5.0}
 
 
 import pandas as pd
@@ -22,9 +23,9 @@ MAX_LENGTH = 256
 BATCH_SIZE = 16
 EPOCHS = 5
 
-# 2 labels
-id2label = {k:k for k in range(5)}
-label2id = {k:k for k in range(5)}
+# 4 labels, 0 1 2 3
+id2label = {k:k for k in range(4)}
+label2id = {k:k for k in range(4)}
 
 tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
 model = AutoModelForSequenceClassification.from_pretrained(BASE_MODEL, id2label=id2label, label2id=label2id)
@@ -45,20 +46,16 @@ device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cp
 model.to(device)
 
 def load_data():
-    train = pd.read_csv('./news_bias_dataset/preprocessed_dataset.csv', delimiter=',')
-    print(train['bias_score'].unique())
-    print(train.describe())
-    # 提取需要的列
-    new_df = train[['id_event', 'id_article', 'id_sentence', 'sentence_text', 'bias_score']]
+    train_raw_dataset = pd.read_csv('./news_bias_dataset/preprocessed_dataset.csv', delimiter=',')
+    print(train_raw_dataset['bias_score'].unique())
+    print(train_raw_dataset.describe())
+    new_df = train_raw_dataset[['id_event', 'id_article', 'id_sentence', 'sentence_text', 'bias_score']]
 
-    # 计算每组的平均 bias_score
-    group_avg = train.groupby(['id_event', 'id_article', 'id_sentence'])['bias_score'].transform('mean')
+    group_avg = train_raw_dataset.groupby(['id_event', 'id_article', 'id_sentence'])['bias_score'].transform('mean')
 
-    # 定义偏离阈值 (可以选择一个合适的值，比如标准差)
-    threshold = 1.0  # 自定义阈值，或使用 group_avg.std()
+    threshold = 1.0
 
-    # 找到偏离太远的记录并替换为平均值
-    train['bias_score'] = train.apply(
+    train_raw_dataset['bias_score'] = train_raw_dataset.apply(
         lambda row: group_avg[row.name] if abs(row['bias_score'] - group_avg[row.name]) > threshold else row[
             'bias_score'],
         axis=1
