@@ -1,4 +1,5 @@
-# binary classification: neutral / bias
+# four classification
+# {'eval_loss': 1.1621623039245605, 'eval_accuracy': 0.46859903381642515, 'eval_runtime': 11.1691, 'eval_samples_per_second': 55.6, 'eval_steps_per_second': 3.492, 'epoch': 5.0}
 
 
 import pandas as pd
@@ -25,31 +26,18 @@ MAX_LENGTH = 256
 BATCH_SIZE = 16
 EPOCHS = 5
 
-# 2 labels
+# 4 labels, 0 1 2 3
 id2label = {k:k for k in range(4)}
 label2id = {k:k for k in range(4)}
 
-# tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
-# model = AutoModelForSequenceClassification.from_pretrained(
-#     BASE_MODEL,
-#     num_labels=1,
-#     problem_type="regression"  # Explicitly set as regression
-# )
-# # Modify the model's final layer to remove sigmoid activation
-# # This allows the model to predict unbounded values
-# model.classifier.activation = None
-
-# 首先在模型中添加调试信息
-class RobertaForBiasClassification(RobertaPreTrainedModel):
+class AutoModelForSequenceClassificationCombined(AutoModelForSequenceClassification):
     def __init__(self, config):
         super().__init__(config)
         self.roberta = RobertaModel(config)
 
-        # 为article_bias和source_bias创建embedding层
         self.article_bias_embeddings = nn.Embedding(4, 16)
         self.source_bias_embeddings = nn.Embedding(4, 16)
 
-        # 合并所有特征的线性层
         combined_dim = config.hidden_size + 16 + 16
         self.classifier = nn.Sequential(
             nn.Linear(combined_dim, 256),
@@ -65,21 +53,17 @@ class RobertaForBiasClassification(RobertaPreTrainedModel):
                 source_bias=None,
                 labels=None):
 
-        # 添加输入验证
         if article_bias is None or source_bias is None:
             raise ValueError("article_bias and source_bias must be provided")
 
-        # 确保数据类型正确
         article_bias = article_bias.to(torch.long)
         source_bias = source_bias.to(torch.long)
 
-        # 确保值在有效范围内
         if torch.max(article_bias) >= 4 or torch.min(article_bias) < 0:
             raise ValueError(f"article_bias values must be between 0 and 3, got: {article_bias}")
         if torch.max(source_bias) >= 4 or torch.min(source_bias) < 0:
             raise ValueError(f"source_bias values must be between 0 and 3, got: {source_bias}")
 
-        # 获取RoBERTa的输出
         outputs = self.roberta(
             input_ids=input_ids,
             attention_mask=attention_mask
@@ -88,18 +72,15 @@ class RobertaForBiasClassification(RobertaPreTrainedModel):
         sequence_output = outputs[0]
         pooled_output = sequence_output[:, 0, :]
 
-        # 获取bias embeddings
         article_bias_embed = self.article_bias_embeddings(article_bias)
         source_bias_embed = self.source_bias_embeddings(source_bias)
 
-        # 连接所有特征
         combined_features = torch.cat([
             pooled_output,
             article_bias_embed,
             source_bias_embed
         ], dim=1)
 
-        # 通过分类器
         logits = self.classifier(combined_features)
 
         loss = None
@@ -113,12 +94,7 @@ class RobertaForBiasClassification(RobertaPreTrainedModel):
         )
 
 tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
-model = RobertaForBiasClassification.from_pretrained(
-    BASE_MODEL,
-    id2label=id2label,
-    label2id=label2id
-)
-
+model = AutoModelForSequenceClassificationCombined.from_pretrained(BASE_MODEL, id2label=id2label, label2id=label2id)
 
 
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
@@ -155,11 +131,9 @@ def load_data():
 def preprocess_function(examples):
     label = examples["bias_score"]
 
-    # 确保article_bias和source_bias是整数
     article_bias = int(examples["article_bias"])
     source_bias = int(examples["source_bias"])
 
-    # 确保值在0-4范围内
     article_bias = max(0, min(4, article_bias))
     source_bias = max(0, min(4, source_bias))
 
@@ -175,19 +149,6 @@ def preprocess_function(examples):
     results["source_bias"] = source_bias
 
     return results
-
-# def preprocess_function(examples):
-#     # Ensure labels are properly scaled between 0 and 1
-#     label = float(examples["bias_score"]) / 3.0  # This scales them to 0-1
-#
-#     result = tokenizer(
-#         examples["sentence_text"],
-#         truncation=True,
-#         padding="max_length",
-#         max_length=MAX_LENGTH
-#     )
-#     result["label"] = label
-#     return result
 
 
 def compute_metrics(eval_pred):
@@ -261,14 +222,6 @@ if __name__ == '__main__':
         load_best_model_at_end=True,
         weight_decay=0.01,
     )
-
-    # trainer = Trainer(
-    #     model=model,
-    #     args=training_args,
-    #     train_dataset=ds["train"],
-    #     eval_dataset=ds["valid"],
-    #     compute_metrics=compute_metrics
-    # )
 
     trainer = Trainer(
         model=model,
