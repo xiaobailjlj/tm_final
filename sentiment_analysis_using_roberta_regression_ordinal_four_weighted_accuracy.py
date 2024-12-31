@@ -172,6 +172,9 @@ class OrdinalRegressionTrainer(Trainer):
 def compute_metrics(eval_pred):
     logits, labels = eval_pred
     predictions = (torch.sigmoid(torch.tensor(logits)) > 0.5).long().sum(dim=1).numpy()
+    print(f'labels: {labels}')
+    print(f'logits: {logits}')
+    print(f'predictions: {predictions}')
 
     # Basic accuracy metrics
     exact_match = float(np.mean(predictions == labels))
@@ -229,7 +232,7 @@ def compute_metrics(eval_pred):
 
     accuracy_distance_0 = float(np.mean(predictions == labels))
     accuracy_distance_1 = float(np.mean(np.abs(predictions - labels) <= 1))
-    weighted_accuracy_distance = (accuracy_distance_0*3 + accuracy_distance_1) / 4
+    weighted_accuracy_distance = (accuracy_distance_0*2 + accuracy_distance_1) / 3
 
     metrics = {
         "accuracy": exact_match,

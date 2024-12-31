@@ -6,4 +6,3 @@ venv
 .DS_Store
 models
 *.zip
-news_bias_dataset/BABE/
