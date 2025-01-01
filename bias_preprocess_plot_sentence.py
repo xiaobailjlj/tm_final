@@ -2,62 +2,55 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# Load the dataset (adjust file path as needed)
-file_path = "news_bias_dataset/Sora_LREC2020_biasedsentences.csv"
-data = pd.read_csv(file_path)
+# File path for the preprocessed dataset
+file_path = "news_bias_dataset/preprocessed_dataset.csv"
 
-# Define the mapping for event ids to event names
-event_name_mapping = {
-    1: "Johnson",
-    2: "Facebook",
-    3: "NFL",
-    4: "NorthKorea"
-}
+# Read the CSV file into a DataFrame
+df = pd.read_csv(file_path)
 
-# We are interested in the `id_event` and `article_bias` columns.
-data = data[['id_event', 'article_bias']]
+# Map event names to the corresponding id_event values
+event_names = {1: "Johnson", 2: "Facebook", 3: "NFL", 4: "NorthKorea"}
+df["event_name"] = df["id_event"].map(event_names)
 
-# Filter to keep valid article_bias values (1, 2, 3, 4).
-data = data[data['article_bias'].isin([1, 2, 3, 4])]
+# Calculate percentages for bias scores across events
+bias_distribution = (
+    df.groupby(["event_name", "bias_score"])
+    .size()
+    .unstack(fill_value=0)
+    .apply(lambda x: 100 * x / x.sum(), axis=1)
+)
+bias_distribution["Total"] = bias_distribution.sum(axis=1)
 
-# Map `id_event` to the event names
-data['event_name'] = data['id_event'].map(event_name_mapping)
+# Overall percentage distribution across all events
+overall_distribution = (
+    df.groupby("bias_score").size() / len(df) * 100
+)
 
-# Compute percentages per event
-percentages_per_event = data.groupby(['event_name', 'article_bias']).size().unstack(fill_value=0)
-percentages_per_event = percentages_per_event.div(percentages_per_event.sum(axis=1), axis=0) * 100
-
-# Compute overall percentages
-overall_percentages = data.groupby('article_bias').size() / len(data) * 100
-
-# Print percentages
-print("\nPercentage Distribution Per Event:")
-print(percentages_per_event)
-
-print("\nOverall Percentage Distribution:")
-print(overall_percentages)
-
-# Plot the distribution using seaborn
+# Plot the distribution of bias scores
 plt.figure(figsize=(10, 6))
-ax = sns.countplot(data=data, x='event_name', hue='article_bias', palette='viridis')
+ax = sns.countplot(data=df, x="event_name", hue="bias_score", palette="muted")
 
-# Add labels and title
-plt.title("Distribution of Article Bias Scores Across Different Events", fontsize=14)
-plt.xlabel("Event Name", fontsize=12)
-plt.ylabel("Count", fontsize=12)
-plt.legend(title='Article Bias', loc='upper right', labels=['1', '2', '3', '4'])
+# Add numbers on top of the bars
+for container in ax.containers:
+    ax.bar_label(container, fmt='%d', label_type='edge', padding=3)
 
-# Annotate the bars with the count value
-for p in ax.patches:
-    ax.annotate(f'{p.get_height()}',
-                (p.get_x() + p.get_width() / 2., p.get_height()),
-                ha='center', va='center',
-                fontsize=10, color='black',
-                xytext=(0, 5), textcoords='offset points')
+plt.title("Distribution of Bias Scores Across Events")
+plt.xlabel("Event Name")
+plt.ylabel("Count")
+plt.legend(title="Bias Score")
+plt.tight_layout()
 
 # Save the plot to a file
-plt.tight_layout()
-plt.savefig("./plots/bias_distribution_plot.png", dpi=300)
+plot_path = "./plots/bias_distribution_plot_sentence.png"
+plt.savefig(plot_path)
 
-# Show the plot
-plt.show()
+# Print the bias score distributions by event
+bias_distribution_formatted = bias_distribution.applymap(lambda x: f"{x:.2f}%")
+overall_distribution_formatted = overall_distribution.apply(lambda x: f"{x:.2f}%")
+
+# Output results
+print("Bias Distribution by Event:")
+print(bias_distribution_formatted)
+print("\nOverall Bias Distribution:")
+print(overall_distribution_formatted)
+print(f"\nPlot saved as {plot_path}")
