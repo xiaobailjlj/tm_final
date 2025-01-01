@@ -81,11 +81,17 @@ def print_results(kappa, summary):
 # Example usage
 if __name__ == "__main__":
     try:
-        # csv_path = './news_bias_dataset/preprocessed_dataset.csv'
-        csv_path = './news_bias_dataset/preprocessed_dataset_topic_facebook.csv'  # -0.037
+        # csv_path = './news_bias_dataset/preprocessed_dataset.csv'  # 0.121
+        # csv_path = './news_bias_dataset/preprocessed_dataset_topic_facebook.csv'  # -0.037
         # csv_path = './news_bias_dataset/preprocessed_dataset_topic_johnson.csv'  # 0.057
         # csv_path = './news_bias_dataset/preprocessed_dataset_topic_NFL.csv'  # 0.201
         # csv_path = './news_bias_dataset/preprocessed_dataset_topic_northkora.csv'  # -0.063
+        # csv_path = './news_bias_dataset/preprocessed_dataset_binary.csv'  # 0.332
+        # csv_path = './news_bias_dataset/preprocessed_dataset_binary_topic_facebook.csv'  # -0.020
+        # csv_path = './news_bias_dataset/preprocessed_dataset_binary_topic_johnson.csv'  # 0.317
+        # csv_path = './news_bias_dataset/preprocessed_dataset_binary_topic_NFL.csv'  # 0.499
+        csv_path = './news_bias_dataset/preprocessed_dataset_binary_topic_NorthKora.csv'  # -0.081
+
         kappa, summary = read_and_calculate_fleiss_kappa(csv_path)
         print_results(kappa, summary)
     except Exception as e:
