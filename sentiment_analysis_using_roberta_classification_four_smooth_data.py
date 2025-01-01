@@ -1,5 +1,5 @@
 # four classification
-# {'eval_loss': 1.1621623039245605, 'eval_accuracy': 0.46859903381642515, 'eval_runtime': 11.1691, 'eval_samples_per_second': 55.6, 'eval_steps_per_second': 3.492, 'epoch': 5.0}
+# {'eval_loss': 1.1422297954559326, 'eval_accuracy': 0.46859903381642515, 'eval_runtime': 3.1212, 'eval_samples_per_second': 198.96, 'eval_steps_per_second': 12.495, 'epoch': 5.0}
 
 
 import pandas as pd
@@ -216,10 +216,4 @@ if __name__ == '__main__':
     # Extract true labels and predicted labels
     true_labels = predictions.label_ids  # Ground truth labels
     predicted_labels = predictions.predictions.argmax(axis=1)  # Predicted labels (for classification tasks)
-
-    # Print the results
-    for idx, (true, pred) in enumerate(zip(true_labels, predicted_labels)):
-        print(f"Example {idx + 1}:")
-        print(f"  True Label: {true}")
-        print(f"  Predicted Label: {pred}")
 

@@ -42,7 +42,7 @@ model = AutoModelForSequenceClassification.from_pretrained(BASE_MODEL, id2label=
 
 
 
-device = 'cpu'
+device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 model.to(device)
 
 def load_data():
@@ -155,7 +155,7 @@ def train_on_fake_labels(trainer, ds, raw_train_ds, raw_test_ds, map_function=pr
     high_confidence_data['bias_score'] = predicted_labels[high_confidence_indices]
 
     # Split 30% of high_confidence_data into test set
-    test_size = 0.3
+    test_size = 0.2
     high_confidence_test_data = high_confidence_data.sample(frac=test_size, random_state=200)
     high_confidence_train_data = high_confidence_data.drop(high_confidence_test_data.index)
 

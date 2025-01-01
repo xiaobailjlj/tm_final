@@ -1,5 +1,5 @@
 # four classification
-# {'eval_loss': 1.1621623039245605, 'eval_accuracy': 0.46859903381642515, 'eval_runtime': 11.1691, 'eval_samples_per_second': 55.6, 'eval_steps_per_second': 3.492, 'epoch': 5.0}
+# {'eval_loss': 1.1353532075881958, 'eval_accuracy': 0.46859903381642515, 'eval_runtime': 3.0568, 'eval_samples_per_second': 203.151, 'eval_steps_per_second': 12.758, 'epoch': 5.0}
 
 
 import pandas as pd
@@ -75,7 +75,7 @@ model = RoBERTaWithLSTM.from_pretrained(BASE_MODEL, id2label=id2label, label2id=
 
 
 
-device = 'cpu'
+device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 model.to(device)
 
 def load_data():

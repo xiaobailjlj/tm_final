@@ -1,4 +1,4 @@
-# four regression
+# {'eval_loss': 0.8052555918693542, 'eval_mse': 0.8052555918693542, 'eval_mae': 0.7311449646949768, 'eval_r2': 0.049349308013916016, 'eval_regression_accuracy': 0.38003220611916266, 'eval_ordinal_accuracy': 0.38003220611916266, 'eval_runtime': 3.1146, 'eval_samples_per_second': 199.385, 'eval_steps_per_second': 12.522, 'epoch': 5.0}
 
 import numpy as np
 import pandas as pd
