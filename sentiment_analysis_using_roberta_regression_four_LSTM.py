@@ -1,22 +1,17 @@
 # four regression
-# {'eval_loss': 1.1314524412155151, 'eval_accuracy': 0.47020933977455714, 'eval_runtime': 3.0833, 'eval_samples_per_second': 201.404, 'eval_steps_per_second': 12.649, 'epoch': 5.0}
 
-
+import numpy as np
 import pandas as pd
-from datasets import Dataset
 import torch
 from datasets import Dataset
-from torch import nn
-from transformers import AutoTokenizer, AutoModelForSequenceClassification, DataCollatorWithPadding
-from torch.utils.data import DataLoader
-import numpy as np
-from evaluate import load
-from transformers import TrainingArguments
-from transformers import Trainer
 from evaluate import load
 from sklearn.metrics import mean_absolute_error
 from sklearn.metrics import mean_squared_error
 from sklearn.metrics import r2_score
+from torch import nn
+from transformers import AutoTokenizer, AutoModelForSequenceClassification, DataCollatorWithPadding
+from transformers import Trainer
+from transformers import TrainingArguments
 from transformers.modeling_outputs import SequenceClassifierOutput
 
 BASE_MODEL = "roberta-base"
@@ -241,11 +236,4 @@ if __name__ == '__main__':
     # Extract true labels and predicted labels
     true_labels = predictions.label_ids  # Ground truth labels
     # Need to be modified for regression tasks
-    predicted_labels = predictions.predictions.argmax(axis=1)  # Predicted labels (for classification tasks)
-
-    # Print the results
-    for idx, (true, pred) in enumerate(zip(true_labels, predicted_labels)):
-        print(f"Example {idx + 1}:")
-        print(f"  True Label: {true}")
-        print(f"  Predicted Label: {pred}")
 

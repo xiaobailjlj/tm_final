@@ -16,10 +16,8 @@ MAX_LEN = 256
 TRAIN_BATCH_SIZE = 8
 VALID_BATCH_SIZE = 4
 
-# 设置设备
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-# 加载预训练模型和分词器
 tokenizer = AutoTokenizer.from_pretrained('cardiffnlp/twitter-roberta-base-sentiment-latest')
 base_model = AutoModelForSequenceClassification.from_pretrained(
     'cardiffnlp/twitter-roberta-base-sentiment-latest'
@@ -152,35 +150,20 @@ def train_model(model, train_loader, val_loader, device, num_epochs=5):
         val_labels = []
 
         with torch.no_grad():
-            for batch in val_loader:
+           for batch in val_loader:
                 input_ids = batch['ids'].to(device)
                 attention_mask = batch['mask'].to(device)
                 labels = batch['targets'].to(device)
-
                 outputs = model(input_ids, attention_mask)
-                predictions = (outputs >= 0).sum(dim=1)
-
-                val_preds.extend(predictions.cpu().numpy())
+                val_preds.extend(outputs.cpu().numpy())
                 val_labels.extend(labels.cpu().numpy())
-
-        val_f1 = f1_score(val_labels, val_preds, average='weighted')
-        val_acc = accuracy_score(val_labels, val_preds)
-
-        print(f'Epoch {epoch + 1}:')
-        print(f'Average Loss: {total_loss / len(train_loader):.4f}')
-        print(f'Validation F1: {val_f1:.4f}')
-        print(f'Validation Accuracy: {val_acc:.4f}')
-
-        if val_f1 > best_val_f1:
-            best_val_f1 = val_f1
-            torch.save(model.state_dict(), 'best_model.pt')
+           val_preds = np.array(val_preds)
+           val_labels = np.array(val_labels)
 
 
 def main():
-    # 初始化模型
     model = BiasClassifier(base_model).to(device)
 
-    # 训练模型
     train_model(model, training_loader, testing_loader, device)
 
 

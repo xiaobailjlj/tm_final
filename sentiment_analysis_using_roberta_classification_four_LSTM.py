@@ -238,11 +238,4 @@ if __name__ == '__main__':
 
     # Extract true labels and predicted labels
     true_labels = predictions.label_ids  # Ground truth labels
-    predicted_labels = predictions.predictions.argmax(axis=1)  # Predicted labels (for classification tasks)
-
-    # Print the results
-    for idx, (true, pred) in enumerate(zip(true_labels, predicted_labels)):
-        print(f"Example {idx + 1}:")
-        print(f"  True Label: {true}")
-        print(f"  Predicted Label: {pred}")
 
