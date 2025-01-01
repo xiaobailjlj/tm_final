@@ -78,21 +78,12 @@ class OrdinalRegressionModel(nn.Module):
 class OrdinalLoss(nn.Module):
     def __init__(self):
         super(OrdinalLoss, self).__init__()
-        self.bce = nn.BCELoss()
+        self.mse = nn.MSELoss()
 
     def forward(self, predictions, targets):
-        # Convert ordinal targets to binary targets
-        binary_targets = self.to_binary(targets, predictions.shape[1])
-
-        # Basic BCE loss
-        loss = self.bce(predictions, binary_targets)
-
-        return loss
-    def to_binary(self, targets, num_classes):
-        binary_targets = torch.zeros((targets.size(0), num_classes), device=targets.device)
-        for i in range(num_classes):
-            binary_targets[:, i] = (targets > i).float()
-        return binary_targets
+        norm_targets = targets.float() / (predictions.shape[1])
+        norm_targets = norm_targets.view(-1, 1)  # Reshape to match predictions
+        return self.mse(predictions, norm_targets)
 
 
 # Dataset class remains the same
@@ -102,11 +93,11 @@ class OrdinalSentimentData(Dataset):
         self.data = dataframe
         self.text = dataframe.sentence_text
         bias_score = dataframe.bias_score
-        article_bias = dataframe.article_bias
-        source_bias = dataframe.source_bias
-        combined_bias = bias_score * 0.6 + article_bias * 0.25 + source_bias * 0.15
+        # article_bias = dataframe.article_bias
+        # source_bias = dataframe.source_bias
+        # combined_bias = bias_score * 0.6 + article_bias * 0.25 + source_bias * 0.15
 
-        self.targets = combined_bias.astype(int).tolist()
+        self.targets = bias_score.astype(int).tolist()
         self.max_len = max_len
 
     def __len__(self):
@@ -172,32 +163,32 @@ def train(model, optimizer, loss_function, training_loader, device, clip_grad_no
 def test(model, loss_function, testing_loader, device):
     model.eval()
     test_loss = 0
-    nb_test_steps = 0
     predictions = []
     actual_labels = []
 
     with torch.no_grad():
-        for _, data in enumerate(testing_loader, 0):
-            ids = data['ids'].to(device, dtype=torch.long)
-            mask = data['mask'].to(device, dtype=torch.long)
-            token_type_ids = data['token_type_ids'].to(device, dtype=torch.long)
-            targets = data['targets'].to(device, dtype=torch.long)
+        for data in testing_loader:
+            ids = data['ids'].to(device)
+            mask = data['mask'].to(device)
+            token_type_ids = data['token_type_ids'].to(device)
+            targets = data['targets'].to(device)
 
             outputs = model(input_ids=ids, attention_mask=mask, token_type_ids=token_type_ids)
             loss = loss_function(outputs, targets)
             test_loss += loss.item()
-            nb_test_steps += 1
 
-            pred_labels = (outputs > 0.5).sum(dim=1)
-            predictions.extend(pred_labels.cpu().numpy())
+            # 修改预测方法
+            pred_probs = outputs.cpu().numpy()
+            pred_labels = np.argmax(pred_probs, axis=1)
+
+            predictions.extend(pred_labels)
             actual_labels.extend(targets.cpu().numpy())
 
-    accuracy = sum(1 for x, y in zip(predictions, actual_labels) if x == y) / len(predictions)
-    mae = sum(abs(x - y) for x, y in zip(predictions, actual_labels)) / len(predictions)
+    # 计算1分误差内的准确率
+    accuracy = sum(abs(x - y) <= 0.5 for x, y in zip(predictions, actual_labels)) / len(predictions)
+    mae = np.mean(np.abs(np.array(predictions) - np.array(actual_labels)))
 
-    print(f"Test Loss: {test_loss / nb_test_steps}")
-    print(f"Accuracy: {accuracy}")
-    print(f"Mean Absolute Error: {mae}")
+    print(f"Test Loss: {test_loss}, Accuracy: {accuracy}, MAE: {mae}")
 
     return accuracy, mae
 
