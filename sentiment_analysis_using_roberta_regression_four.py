@@ -205,6 +205,7 @@ if __name__ == '__main__':
 
     # Extract true labels and predicted labels
     true_labels = predictions.label_ids  # Ground truth labels
+    # Need to be modified for regression tasks
     predicted_labels = predictions.predictions.argmax(axis=1)  # Predicted labels (for classification tasks)
 
     # Print the results
