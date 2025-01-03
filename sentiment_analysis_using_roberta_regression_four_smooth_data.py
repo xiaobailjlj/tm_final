@@ -1,7 +1,3 @@
-# four regression
-# {'eval_loss': 0.8064145445823669, 'eval_mse': 0.8064144849777222, 'eval_mae': 0.7312358617782593, 'eval_r2': 0.047981202602386475, 'eval_regression_accuracy': 0.38003220611916266, 'eval_ordinal_accuracy': 0.38003220611916266, 'eval_runtime': 3.027, 'eval_samples_per_second': 205.156, 'eval_steps_per_second': 12.884, 'epoch': 5.0}
-
-
 import pandas as pd
 from datasets import Dataset
 import torch

@@ -1,0 +1,16 @@
+The related codes corresponding to the models in Table 5 of the report are as follows:
+------------------------------------------------------------------------------------------------
+RoBERTa Regression with no Optimization        ----> sentiment_analysis_using_roberta_regression_four.py
+RoBERTa Regression with Smooth Data            ----> sentiment_analysis_using_roberta_regression_four_smooth_data.py
+RoBERTa Regression with Add Embedding          ----> sentiment_analysis_using_roberta_regression_four_plus_embedding.py
+RoBERTa Regression with Add LSTM Layer         ----> sentiment_analysis_using_roberta_regression_four_LSTM.py
+RoBERTa Regression with Weighted Accuracy      ----> sentiment_analysis_using_roberta_regression_weighted_accuracy.py
+RoBERTa Regression with Data Augmentation      ----> sentiment_analysis_using_roberta_regression_fake_label.py
+RoBERTa Classification with no Optimization    ----> sentiment_analysis_using_roberta_classification_four.py
+RoBERTa Classification with Smooth Data        ----> sentiment_analysis_using_roberta_classification_four_smooth_data.py
+RoBERTa Classification with Add Embedding      ----> sentiment_analysis_using_roberta_classification_four_plus_embedding.py
+RoBERTa Classification with Add LSTM Layer     ----> sentiment_analysis_using_roberta_classification_four_LSTM.py
+RoBERTa Classification with Data Augmentation  ----> sentiment_analysis_using_roberta_classification_fake_label.py
+twitter-RoBERTa  with LSTM Layer               ----> sentiment_analysis_using_twitter_roberta_regression.py
+ABSA with LSTM Layer                           ----> sentiment_analysis_using_ABSA_regression_LSTM.py
+------------------------------------------------------------------------------------------------

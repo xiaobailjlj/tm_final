@@ -1,7 +1,3 @@
-# four regression
-# {'eval_loss': 0.762065589427948, 'eval_mse': 0.7620656387080399, 'eval_mae': 0.7220816964496545, 'eval_r2': 0.10033756494522095, 'eval_regression_accuracy': 0.37681159420289856, 'eval_ordinal_accuracy': 0.37681159420289856, 'eval_runtime': 3.0818, 'eval_samples_per_second': 201.502, 'eval_steps_per_second': 12.655, 'epoch': 5.0}
-
-
 import pandas as pd
 import transformers
 from datasets import Dataset

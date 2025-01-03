@@ -1,7 +1,3 @@
-# binary classification: neutral / bias
-# {'eval_loss': 0.5661318302154541, 'eval_accuracy': 0.714975845410628, 'eval_runtime': 11.0059, 'eval_samples_per_second': 56.424, 'eval_steps_per_second': 3.544, 'epoch': 5.0}
-
-
 import pandas as pd
 from datasets import Dataset
 import torch

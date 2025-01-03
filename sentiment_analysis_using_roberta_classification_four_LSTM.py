@@ -1,7 +1,3 @@
-# four classification
-# {'eval_loss': 1.1353532075881958, 'eval_accuracy': 0.46859903381642515, 'eval_runtime': 3.0568, 'eval_samples_per_second': 203.151, 'eval_steps_per_second': 12.758, 'epoch': 5.0}
-
-
 import pandas as pd
 from datasets import Dataset
 import torch

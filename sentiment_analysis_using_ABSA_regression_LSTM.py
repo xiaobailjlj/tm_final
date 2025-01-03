@@ -1,4 +1,3 @@
-# Test Loss: 19.10767898429185, Accuracy: 0.34299516908212563, MAE: 0.8623188405797102
 import numpy as np
 import pandas as pd
 import torch

@@ -19,9 +19,9 @@ MAX_LENGTH = 256
 BATCH_SIZE = 16
 EPOCHS = 5
 
-# 2 labels
-id2label = {k:k for k in range(2)}
-label2id = {k:k for k in range(2)}
+# 4 labels, 0 1 2 3
+id2label = {k:k for k in range(4)}
+label2id = {k:k for k in range(4)}
 
 tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
 model = AutoModelForSequenceClassification.from_pretrained(BASE_MODEL, id2label=id2label, label2id=label2id)
@@ -38,14 +38,17 @@ model = AutoModelForSequenceClassification.from_pretrained(BASE_MODEL, id2label=
 
 
 
-device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+device = 'cpu'
 model.to(device)
 
 def load_data():
-    train = pd.read_csv('./news_bias_dataset/BABE/processed_labels.csv', delimiter=',')
+    train = pd.read_csv('./news_bias_dataset/preprocessed_dataset.csv', delimiter=',')
     print(train['bias_score'].unique())
     print(train.describe())
-    new_df = train[['sentence_text', 'bias_score']]
+    new_df = train[['source_bias', 'sentence_text', 'article_bias', 'bias_score']]
+    w1, w2, w3 = 0.1, 0.2, 0.7  # Example weights, adjust as needed
+    new_df['bias_score'] = w1 * new_df['source_bias'] + w2 * new_df['article_bias'] + w3 * new_df['bias_score']
+    new_df = new_df[['sentence_text', 'bias_score']]
     train_size = 0.7
     valid_size = 0.5
     train_data = new_df.sample(frac=train_size, random_state=200)
@@ -72,7 +75,7 @@ def load_data():
 def preprocess_function(examples):
     label = examples["bias_score"]
     results = tokenizer(examples["sentence_text"], truncation=True, padding="max_length", max_length=256)
-    results["label"] = label
+    results["label"] = int(label)
     return results
 
 # def preprocess_function(examples):
@@ -194,6 +197,7 @@ if __name__ == '__main__':
     trainer.eval_dataset = ds["test"]
     print(trainer.evaluate())
 
+
     print("Evaluating on test set")
     # Perform evaluation
     predictions = trainer.predict(trainer.eval_dataset)
@@ -207,6 +211,4 @@ if __name__ == '__main__':
         print(f"Example {idx + 1}:")
         print(f"  True Label: {true}")
         print(f"  Predicted Label: {pred}")
-
-
 

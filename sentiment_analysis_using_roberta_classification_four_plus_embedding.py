@@ -1,7 +1,3 @@
-# four classification
-# {'eval_loss': 1.1456422805786133, 'eval_accuracy': 0.463768115942029, 'eval_runtime': 3.0397, 'eval_samples_per_second': 204.299, 'eval_steps_per_second': 12.83, 'epoch': 5.0}
-
-
 import pandas as pd
 import transformers
 from datasets import Dataset

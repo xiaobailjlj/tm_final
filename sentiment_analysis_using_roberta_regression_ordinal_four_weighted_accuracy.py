@@ -1,39 +1,3 @@
-# ordinal regression model, weighted accuracy, and custom metrics
-# weighted_accuracy_distance = (accuracy_distance_0 + accuracy_distance_1) / 2
-# Test set results:
-# eval_loss: 0.5043
-# eval_accuracy: 0.3816
-# eval_weighted_accuracy: 0.6425
-# eval_ordinal_penalty: 0.8890
-# eval_runtime: 11.4080
-# eval_samples_per_second: 54.4360
-# eval_steps_per_second: 3.4190
-# epoch: 5.0000
-
-# weighted_accuracy_distance = (accuracy_distance_0 * 2 + accuracy_distance_1) / 3
-# Test set results:
-# eval_loss: 0.5020
-# eval_accuracy: 0.4010
-# eval_weighted_accuracy: 0.5674
-# eval_ordinal_penalty: 0.8580
-# eval_runtime: 11.5529
-# eval_samples_per_second: 53.7530
-# eval_steps_per_second: 3.3760
-# epoch: 5.0000
-
-# weighted_accuracy_distance = (accuracy_distance_0*3 + accuracy_distance_1) / 4
-# Test set results:
-# eval_loss: 0.4981
-# eval_accuracy: 0.3945
-# eval_weighted_accuracy: 0.5145
-# eval_ordinal_penalty: 0.9857
-# eval_runtime: 11.8154
-# eval_samples_per_second: 52.5580
-# eval_steps_per_second: 3.3010
-# epoch: 5.0000
-
-
-
 import pandas as pd
 from datasets import Dataset
 import torch

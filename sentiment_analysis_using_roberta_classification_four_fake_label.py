@@ -1,5 +1,3 @@
-# four classification
-# {'eval_loss': 1.1621623039245605, 'eval_accuracy': 0.46859903381642515, 'eval_runtime': 11.1691, 'eval_samples_per_second': 55.6, 'eval_steps_per_second': 3.492, 'epoch': 5.0}
 import os
 
 import pandas as pd
