@@ -1,5 +1,5 @@
-# four regression
-# {'eval_loss': 0.8141754865646362, 'eval_mse': 0.814175546169281, 'eval_mae': 0.7071697115898132, 'eval_r2': 0.038818693990945285, 'eval_regression_accuracy': 0.38003220611916266, 'eval_ordinal_accuracy': 0.38003220611916266, 'eval_runtime': 11.1496, 'eval_samples_per_second': 55.697, 'eval_steps_per_second': 3.498, 'epoch': 5.0}
+# four classification
+# {'eval_loss': 1.1621623039245605, 'eval_accuracy': 0.46859903381642515, 'eval_runtime': 11.1691, 'eval_samples_per_second': 55.6, 'eval_steps_per_second': 3.492, 'epoch': 5.0}
 
 
 import pandas as pd
@@ -16,8 +16,9 @@ from evaluate import load
 from sklearn.metrics import mean_absolute_error
 from sklearn.metrics import mean_squared_error
 from sklearn.metrics import r2_score
-from sklearn.metrics import precision_score, recall_score, classification_report
-
+from sklearn.metrics import precision_score, recall_score
+import numpy as np
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
 BASE_MODEL = "roberta-base"
 LEARNING_RATE = 2e-5
@@ -25,34 +26,33 @@ MAX_LENGTH = 256
 BATCH_SIZE = 16
 EPOCHS = 5
 
-# # 2 labels
-# id2label = {k:k for k in range(5)}
-# label2id = {k:k for k in range(5)}
-#
-# tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
-# model = AutoModelForSequenceClassification.from_pretrained(BASE_MODEL, id2label=id2label, label2id=label2id)
+# 4 labels, 0 1 2 3
+id2label = {k:k for k in range(4)}
+label2id = {k:k for k in range(4)}
 
 tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
-model = AutoModelForSequenceClassification.from_pretrained(
-    BASE_MODEL,
-    num_labels=1,
-    problem_type="regression"  # Explicitly set as regression
-)
-# Modify the model's final layer to remove sigmoid activation
-# This allows the model to predict unbounded values
-model.classifier.activation = None
+model = AutoModelForSequenceClassification.from_pretrained(BASE_MODEL, id2label=id2label, label2id=label2id)
+
+# tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
+# model = AutoModelForSequenceClassification.from_pretrained(
+#     BASE_MODEL,
+#     num_labels=1,
+#     problem_type="regression"  # Explicitly set as regression
+# )
+# # Modify the model's final layer to remove sigmoid activation
+# # This allows the model to predict unbounded values
+# model.classifier.activation = None
 
 
 
-device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+device = 'cpu'
 model.to(device)
 
 def load_data():
-    train_raw_dataset = pd.read_csv('./news_bias_dataset/preprocessed_dataset.csv', delimiter=',')
-    print(train_raw_dataset['bias_score'].unique())
-    print(train_raw_dataset.describe())
-    new_df = train_raw_dataset[['sentence_text', 'bias_score']]
-
+    train = pd.read_csv('./news_bias_dataset/preprocessed_dataset.csv', delimiter=',')
+    print(train['bias_score'].unique())
+    print(train.describe())
+    new_df = train[['sentence_text', 'bias_score']]
     train_size = 0.7
     valid_size = 0.5
     train_data = new_df.sample(frac=train_size, random_state=200)
@@ -79,7 +79,7 @@ def load_data():
 def preprocess_function(examples):
     label = examples["bias_score"]
     results = tokenizer(examples["sentence_text"], truncation=True, padding="max_length", max_length=256)
-    results["label"] = float(label)
+    results["label"] = label
     return results
 
 # def preprocess_function(examples):
@@ -99,48 +99,60 @@ def preprocess_function(examples):
 def compute_metrics(eval_pred):
     logits, labels = eval_pred
     predictions = np.argmax(logits, axis=-1)
+
+    # Calculate Precision and Recall
+    precision = precision_score(labels, predictions, average=None, zero_division=0)
+    recall = recall_score(labels, predictions, average=None, zero_division=0)
+
+    # Print precision and recall
+    print(f"Precision: {precision}")
+    print(f"Recall: {recall}")
+
     return metric.compute(predictions=predictions, references=labels)
 
+# def compute_metrics_for_regression(eval_pred):
+#     logits, labels = eval_pred
+#     logits = logits.squeeze()
+#     labels = labels.squeeze()
+#
+#     print(f'logits: {logits}')
+#     print(f'labels: {labels}')
+#
+#     # If you normalized the labels earlier, you might want to denormalize predictions here
+#     # logits = logits * 4 + 1  # Example: converting back to 1-5 scale
+#
+#     mse = mean_squared_error(labels, logits)
+#     mae = mean_absolute_error(labels, logits)
+#     r2 = r2_score(labels, logits)
+#
+#     # Calculate accuracy with a tolerance
+#     # Use 0.125 tolerance (slightly less than half the distance between classes)
+#     tolerance = 0.125
+#     accuracy = np.mean(np.abs(logits - labels) < tolerance)
+#
+#     pred_classes = np.round(logits * 3).clip(0, 3)
+#     true_classes = np.round(labels * 3).clip(0, 3)
+#     ordinal_accuracy = np.mean(pred_classes == true_classes)
+#
+#     # Calculate Precision and Recall based on the discrete classes
+#     precision = precision_score(true_classes, pred_classes, average='macro', zero_division=0)
+#     recall = recall_score(true_classes, pred_classes, average='macro', zero_division=0)
+#
+#     print(f'predictions: {predictions}')
+#     print(f'labels: {labels}')
+#     print(f'precision: {precision}')
+#     print(f'recall: {recall}')
+#
+#     return {
+#         "mse": mse,
+#         "mae": mae,
+#         "r2": r2,
+#         "regression_accuracy": accuracy,
+#         "ordinal_accuracy": ordinal_accuracy,
+#         "precision": precision,
+#         "recall": recall
+#     }
 
-def compute_metrics_for_regression(eval_pred):
-    logits, labels = eval_pred
-    logits = logits.squeeze()
-    labels = labels.squeeze()
-
-    print(f'logis: {logits}')
-    print(f'labels: {labels}')
-
-    # If you normalized the labels earlier, you might want to denormalize predictions here
-    # logits = logits * 4 + 1  # Example: converting back to 1-5 scale
-
-    mse = mean_squared_error(labels, logits)
-    mae = mean_absolute_error(labels, logits)
-    r2 = r2_score(labels, logits)
-
-    # Calculate accuracy with a tolerance
-    # Use 0.5 tolerance (slightly less than half the distance between classes)
-    tolerance = 0.5
-    accuracy = np.mean(np.abs(logits - labels) < tolerance)
-
-    pred_classes = np.round(logits).clip(0, 3)
-    true_classes = np.round(labels).clip(0, 3)
-    ordinal_accuracy = np.mean(pred_classes == true_classes)
-
-    return {
-        "mse": mse,
-        "mae": mae,
-        "r2": r2,
-        "regression_accuracy": accuracy,
-        "ordinal_accuracy": ordinal_accuracy
-    }
-
-class RegressionTrainer(Trainer):
-    def compute_loss(self, model, inputs, return_outputs=False):
-        labels = inputs.pop("labels")
-        outputs = model(**inputs)
-        logits = outputs[0][:, 0]
-        loss = torch.nn.functional.mse_loss(logits, labels)
-        return (loss, outputs) if return_outputs else loss
 
 
 if __name__ == '__main__':
@@ -170,17 +182,25 @@ if __name__ == '__main__':
         num_train_epochs=EPOCHS,
         evaluation_strategy="epoch",
         save_strategy="epoch",
-        metric_for_best_model="mse",
+        metric_for_best_model="accuracy",
         load_best_model_at_end=True,
         weight_decay=0.01,
     )
 
-    trainer = RegressionTrainer(
+    # trainer = Trainer(
+    #     model=model,
+    #     args=training_args,
+    #     train_dataset=ds["train"],
+    #     eval_dataset=ds["valid"],
+    #     compute_metrics=compute_metrics
+    # )
+
+    trainer = Trainer(
         model=model,
         args=training_args,
         train_dataset=ds["train"],
         eval_dataset=ds["valid"],
-        compute_metrics=compute_metrics_for_regression,
+        compute_metrics=compute_metrics,
         tokenizer=tokenizer,  # Ensure the tokenizer is passed
         data_collator=DataCollatorWithPadding(tokenizer=tokenizer),  # Optional: Handle padding dynamically
     )
@@ -207,19 +227,11 @@ if __name__ == '__main__':
 
     # Extract true labels and predicted labels
     true_labels = predictions.label_ids  # Ground truth labels
-    # Need to be modified for regression tasks
     predicted_labels = predictions.predictions.argmax(axis=1)  # Predicted labels (for classification tasks)
 
-    # Print the results
     # Print the results
     for idx, (true, pred) in enumerate(zip(true_labels, predicted_labels)):
         print(f"Example {idx + 1}:")
         print(f"  True Label: {true}")
         print(f"  Predicted Label: {pred}")
-
-    # Calculate precision and recall for each class (0, 1, 2, 3)
-    for i in range(4):  # There are 4 classes: 0, 1, 2, 3
-        precision = precision_score(true_labels, predicted_labels, labels=[i], average='binary')
-        recall = recall_score(true_labels, predicted_labels, labels=[i], average='binary')
-        print(f"Class {i}: Precision = {precision:.2f}, Recall = {recall:.2f}")
 
