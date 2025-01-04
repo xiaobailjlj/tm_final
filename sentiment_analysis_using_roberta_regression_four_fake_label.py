@@ -1,5 +1,3 @@
-# four regression
-# {'eval_loss': 0.746597945690155, 'eval_model_preparation_time': 0.0013, 'eval_mse': 0.746597945690155, 'eval_mae': 0.7047160863876343, 'eval_r2': 0.11859804391860962, 'eval_regression_accuracy': 0.38164251207729466, 'eval_ordinal_accuracy': 0.38164251207729466, 'eval_runtime': 2.8967, 'eval_samples_per_second': 214.38, 'eval_steps_per_second': 13.463, 'epoch': 5.0}
 import os
 
 import numpy as np
@@ -136,7 +134,7 @@ def train_on_fake_labels_on_regression(trainer, ds, raw_train_ds, raw_test_ds, m
     high_confidence_data['bias_score'] = logits
 
     # Split 30% of high_confidence_data into test set
-    test_size = 0.3
+    test_size = 0.2
     high_confidence_test_data = high_confidence_data.sample(frac=test_size, random_state=200)
     high_confidence_train_data = high_confidence_data.drop(high_confidence_test_data.index)
 

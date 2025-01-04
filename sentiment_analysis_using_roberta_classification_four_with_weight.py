@@ -1,7 +1,3 @@
-# four classification
-# {'eval_loss': 1.1621623039245605, 'eval_accuracy': 0.46859903381642515, 'eval_runtime': 11.1691, 'eval_samples_per_second': 55.6, 'eval_steps_per_second': 3.492, 'epoch': 5.0}
-import os
-
 import pandas as pd
 from datasets import Dataset
 import torch
@@ -13,7 +9,7 @@ from evaluate import load
 from transformers import TrainingArguments
 from transformers import Trainer
 from evaluate import load
-from sklearn.metrics import mean_absolute_error, accuracy_score
+from sklearn.metrics import mean_absolute_error
 from sklearn.metrics import mean_squared_error
 from sklearn.metrics import r2_score
 
@@ -49,7 +45,10 @@ def load_data():
     train = pd.read_csv('./news_bias_dataset/preprocessed_dataset.csv', delimiter=',')
     print(train['bias_score'].unique())
     print(train.describe())
-    new_df = train[['sentence_text', 'bias_score']]
+    new_df = train[['source_bias', 'sentence_text', 'article_bias', 'bias_score']]
+    w1, w2, w3 = 0.1, 0.2, 0.7  # Example weights, adjust as needed
+    new_df['bias_score'] = w1 * new_df['source_bias'] + w2 * new_df['article_bias'] + w3 * new_df['bias_score']
+    new_df = new_df[['sentence_text', 'bias_score']]
     train_size = 0.7
     valid_size = 0.5
     train_data = new_df.sample(frac=train_size, random_state=200)
@@ -74,11 +73,7 @@ def load_data():
 
 
 def preprocess_function(examples):
-    if "bias_score" in examples and examples["bias_score"] is not None:
-        label = min(int(examples["bias_score"]), 3)
-        label = max(label, 0)
-    else:
-        label = 0
+    label = examples["bias_score"]
     results = tokenizer(examples["sentence_text"], truncation=True, padding="max_length", max_length=256)
     results["label"] = int(label)
     return results
@@ -136,47 +131,6 @@ def compute_metrics_for_regression(eval_pred):
     }
 
 
-def train_on_fake_labels(trainer, ds, raw_train_ds, raw_test_ds, map_function=preprocess_function):
-    new_data = pd.read_csv('./news_bias_dataset/augmented_dataset.csv', delimiter=',')
-    new_ds = Dataset.from_pandas(new_data)
-    new_ds = new_ds.map(map_function, remove_columns=["sentence_text"])
-    predictions = trainer.predict(new_ds)
-
-    # Extract true labels and predicted labels
-    logits = predictions.predictions
-    logits = logits - np.min(logits, axis=1, keepdims=True)  # Subtract the minimum value
-    logits = logits / np.sum(logits, axis=1, keepdims=True)  # Normalize by the sum
-    print(f"logits: {logits}")
-    predicted_labels = np.argmax(logits, axis=1)
-    confidences = np.max(logits, axis=1)
-
-    high_confidence_indices = np.where(confidences > 0.45)[0]
-    high_confidence_data = new_data.iloc[high_confidence_indices]
-    high_confidence_data['bias_score'] = predicted_labels[high_confidence_indices]
-
-    # Split 30% of high_confidence_data into test set
-    test_size = 0.3
-    high_confidence_test_data = high_confidence_data.sample(frac=test_size, random_state=200)
-    high_confidence_train_data = high_confidence_data.drop(high_confidence_test_data.index)
-
-    # Combine with original training data
-    combined_data = pd.concat([raw_train_ds.to_pandas(), high_confidence_train_data])
-    combined_train_ds = Dataset.from_pandas(combined_data)
-    combined_train_ds = combined_train_ds.map(map_function, remove_columns=["sentence_text", "bias_score"])
-
-    # Retrain the model with the new combined dataset
-    trainer.train_dataset = combined_train_ds
-    print("Retraining model with high confidence labels")
-    trainer.train()
-
-    ds["test"] = Dataset.from_pandas(pd.concat([raw_test_ds.to_pandas(), high_confidence_test_data]))
-    ds_test = ds["test"].map(map_function, remove_columns=["sentence_text", "bias_score"])
-    trainer.eval_dataset = ds_test
-
-    print("Final evaluation on test set")
-    print(trainer.evaluate())
-    return trainer, ds
-
 
 if __name__ == '__main__':
     raw_train_ds, raw_valid_ds, raw_test_ds = load_data()
@@ -189,6 +143,10 @@ if __name__ == '__main__':
     for split in ds:
         ds[split] = ds[split].map(preprocess_function, remove_columns=["sentence_text", "bias_score"])
         # ds[split] = ds[split].map(preprocess_function)
+    print(f'ds["train"][0]: {ds["train"][0]}')
+    print(f'ds["train"][1]: {ds["train"][1]}')
+    print(f'ds["train"][2]: {ds["train"][2]}')
+    print(f'ds["train"][99]: {ds["train"][99]}')
 
     metric = load("accuracy")
 
@@ -206,6 +164,14 @@ if __name__ == '__main__':
         weight_decay=0.01,
     )
 
+    # trainer = Trainer(
+    #     model=model,
+    #     args=training_args,
+    #     train_dataset=ds["train"],
+    #     eval_dataset=ds["valid"],
+    #     compute_metrics=compute_metrics
+    # )
+
     trainer = Trainer(
         model=model,
         args=training_args,
@@ -216,20 +182,16 @@ if __name__ == '__main__':
         data_collator=DataCollatorWithPadding(tokenizer=tokenizer),  # Optional: Handle padding dynamically
     )
 
+
+    print("Training model")
+    trainer.train()
+
     output_model_file = './models/sentiment_analysis_using_roberta_classification.bin'
     output_vocab_file = './models/'
 
-    if os.path.exists(output_model_file):
-        print("Loading existing model")
-        model = torch.load(output_model_file)
-        # tokenizer = AutoTokenizer.from_pretrained(output_vocab_file)
-    else:
-        print("Training model")
-        trainer.train()
-
-        model_to_save = model
-        torch.save(model_to_save, output_model_file)
-        tokenizer.save_vocabulary(output_vocab_file)
+    model_to_save = model
+    torch.save(model_to_save, output_model_file)
+    tokenizer.save_vocabulary(output_vocab_file)
 
     print("Evaluating on test set")
     trainer.eval_dataset = ds["test"]
@@ -240,6 +202,13 @@ if __name__ == '__main__':
     # Perform evaluation
     predictions = trainer.predict(trainer.eval_dataset)
 
-    for i in range(3):
-        trainer, ds = train_on_fake_labels(trainer, ds, raw_train_ds, raw_test_ds)
+    # Extract true labels and predicted labels
+    true_labels = predictions.label_ids  # Ground truth labels
+    predicted_labels = predictions.predictions.argmax(axis=1)  # Predicted labels (for classification tasks)
+
+    # Print the results
+    for idx, (true, pred) in enumerate(zip(true_labels, predicted_labels)):
+        print(f"Example {idx + 1}:")
+        print(f"  True Label: {true}")
+        print(f"  Predicted Label: {pred}")
 
