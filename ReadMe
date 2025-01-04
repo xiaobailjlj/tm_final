@@ -14,3 +14,6 @@ RoBERTa Classification with Data Augmentation  ----> sentiment_analysis_using_ro
 twitter-RoBERTa  with LSTM Layer               ----> sentiment_analysis_using_twitter_roberta_regression.py
 ABSA with LSTM Layer                           ----> sentiment_analysis_using_ABSA_regression_LSTM.py
 ------------------------------------------------------------------------------------------------
+
+Citeation:
+La Javaness. (2020, June 15). Regression with text input using BERT and transformers. Medium. https://lajavaness.medium.com/regression-with-text-input-using-bert-and-transformers-71c155034b13
