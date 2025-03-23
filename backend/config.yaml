@@ -5,7 +5,7 @@ server:
 
 cors:
   resources:
-    "/api/*":
+    "/*":
       origins: "*"
   methods:
     - 'POST'
