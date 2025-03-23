@@ -2,7 +2,9 @@ Flask==2.3.3
 flask-cors==4.0.0
 nltk==3.8.1
 numpy==1.25.2
-torch==2.1.0
-transformers==4.34.0
+torch==2.1.0+cpu --extra-index-url https://download.pytorch.org/whl/cpu
+transformers==4.34.0 --no-deps
 pyyaml==6.0.1
 gunicorn==21.2.0
+tokenizers
+safetensors
