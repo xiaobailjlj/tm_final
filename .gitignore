@@ -9,3 +9,5 @@ models\*
 *.zip
 news_bias_dataset_processed
 news_bias_dataset_processed\*
+log
+log\*

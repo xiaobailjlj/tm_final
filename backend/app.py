@@ -226,7 +226,9 @@ def add_cors_headers(response):
 
 
 if __name__ == '__main__':
-    logger.info(f"Starting application on port {config.get('port', 5001)}")
-    app.run(debug=config.get('debug', True),
-            host=config.get('host', '127.0.0.1'),
-            port=config.get('port', 5001))
+    server_config = config['server']
+    app.run(
+        debug=server_config['debug'],
+        host=server_config['host'],
+        port=server_config['port']
+    )
