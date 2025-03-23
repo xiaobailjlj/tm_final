@@ -1,0 +1,5 @@
+sentence_id,sentence,is_biased,bias_score
+0,The radical senator pushed through another terrible piece of legislation yesterday.,True,0.9983986020088196
+1,These elitist politicians clearly don't care about hardworking Americans.,True,0.9983610510826111
+2,The disastrous bill will surely lead to economic collapse.,True,0.998224675655365
+3,Only a few brave representatives stood up against this obvious power grab.,True,0.9976102113723755

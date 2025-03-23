@@ -1,0 +1,3 @@
+sentence_id,sentence,is_biased,bias_score
+0,The city council voted 5-2 to approve the new budget yesterday.The budget includes funding for road repairs and a new community center.,False,0.002691824221983552
+1,"Some residents expressed concerns about increased property taxes, while others supported the infrastructure improvements.",False,0.0031161175575107336

@@ -1,0 +1,5 @@
+sentence_id,sentence,is_biased,bias_score
+0,The president announced a new policy yesterday that critics say will harm the economy.,False,0.004108526278287172
+1,This controversial plan was designed to appeal to his core supporters.,True,0.9976626634597778
+2,"However, economic experts have mixed opinions, with some suggesting potential benefits in certain sectors.",False,0.0030044573359191418
+3,"The administration claims it will create jobs, but many industry leaders disagree with this assessment.",True,0.8410094380378723

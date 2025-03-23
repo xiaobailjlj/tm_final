@@ -1,0 +1,13 @@
+sentence_id,sentence,is_biased,bias_score
+0,"Donald Trump served as the 45th president of the United States and in 2024, was re-elected to become the 47th president of the nation.",False,0.002485028002411127
+1,"Trump was sworn into office as the 47th President of the United States on January 20, 2025.",False,0.00346097513101995
+2,"With Trump’s 2024 presidential win, he became the second in history to win non-consecutive terms.",False,0.002520943060517311
+3,"The first to do so was Grover Cleveland, the 22nd and 24th president of the United States.",False,0.0025282069109380245
+4,"During his first run for office, Trump, a real estate developer and reality TV host, was successful in defeating Hillary Clinton for the White House.",False,0.00322626531124115
+5,"Trump lost the popular vote, but won the Electoral College, giving him his first presidential win.",False,0.0026654342655092478
+6,The 2020 presidential election ended in defeat for Trump.,False,0.003763004671782255
+7,"He lost his bid for re-election to the Democratic challenger, President Joe Biden.",False,0.002551783574745059
+8,"In 2022, Trump announced that he would be running in the presidential election of 2024, marking the start of his third campaign.",False,0.002403649967163801
+9,"In July 2024, Trump announced Ohio Senator JD Vance as his running mate.",False,0.002893350552767515
+10,Issues like the economy and border security were ones the Republicans heavily focused on during their pitch to the American people.,False,0.1982172727584839
+11,"Trump was victorious against Vice President Kamala Harris in the 2024 presidential election, winning the popular vote and electoral college to regain his position as POTUS.",False,0.0023824216332286596

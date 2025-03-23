@@ -1,0 +1,2 @@
+sentence_id,sentence,is_biased,bias_score
+0,I hate trump,True,0.8102889657020569

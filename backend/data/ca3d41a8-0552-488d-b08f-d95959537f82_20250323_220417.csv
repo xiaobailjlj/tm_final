@@ -1,0 +1,3 @@
+sentence_id,sentence,is_biased,bias_score
+0,I love trump!!!!,True,0.8498495817184448
+1,!,False,0.24386340379714966

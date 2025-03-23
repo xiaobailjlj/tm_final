@@ -5,4 +5,7 @@ venv
 .idea
 .DS_Store
 models
+models\*
 *.zip
+news_bias_dataset_processed
+news_bias_dataset_processed\*
